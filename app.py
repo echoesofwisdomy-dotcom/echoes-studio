@@ -13,7 +13,7 @@ from google import genai
 from google.genai import types
 
 # ---------------------------------------------------------
-# 1. PAGE SETUP & OBSIDIAN TECH UI (NO CUTOFF / 24H LOCK)
+# 1. PAGE SETUP & OBSIDIAN TECH UI
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Echoes Studio // Terminal",
@@ -26,13 +26,11 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
 
-    /* Transparent header to prevent top clipping */
     header[data-testid="stHeader"] {
         background: transparent !important;
         height: 2.5rem !important;
     }
 
-    /* Global Dark Canvas */
     .stApp {
         background-color: #080B11 !important;
         background-image: radial-gradient(circle at 50% -20%, #151e33 0%, #080B11 75%) !important;
@@ -71,7 +69,7 @@ st.markdown("""
         color: #7DD3FC !important;
     }
 
-    /* High-Contrast Input Labels */
+    /* Input Labels */
     label[data-testid="stWidgetLabel"] p, .stTextInput label p, .stSelectbox label p, .stDateInput label p, .stTimeInput label p {
         color: #94A3B8 !important;
         font-family: 'JetBrains Mono', monospace !important;
@@ -102,7 +100,7 @@ st.markdown("""
         font-size: 14px !important;
     }
 
-    /* Primary Action Buttons */
+    /* Primary Buttons */
     .stButton>button[kind="primary"] {
         background: linear-gradient(135deg, #0284C7 0%, #0369A1 50%, #075985 100%) !important;
         color: #FFFFFF !important;
@@ -128,7 +126,7 @@ st.markdown("""
         transform: translateY(-1px) !important;
     }
 
-    /* Secondary Action Buttons (Default State) */
+    /* Secondary Buttons */
     .stButton>button:not([kind="primary"]) {
         background: #111B30 !important;
         color: #E2E8F0 !important;
@@ -140,7 +138,6 @@ st.markdown("""
         transition: all 0.2s ease !important;
     }
 
-    /* Secondary Action Buttons (Hover / Focus / Active Fix: No Whiteout) */
     .stButton>button:not([kind="primary"]):hover,
     .stButton>button:not([kind="primary"]):focus,
     .stButton>button:not([kind="primary"]):active {
@@ -150,7 +147,7 @@ st.markdown("""
         box-shadow: 0 0 18px rgba(56, 189, 248, 0.35) !important;
     }
 
-    /* Gallery Download Button */
+    /* Download Button */
     .stDownloadButton>button {
         background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
         color: white !important;
@@ -172,7 +169,7 @@ st.markdown("""
         box-shadow: 0 0 28px rgba(52, 211, 153, 0.5) !important;
     }
 
-    /* Telemetry Badges */
+    /* Badges */
     .telemetry-bar {
         display: flex;
         gap: 8px;
@@ -198,7 +195,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. PERSISTENCE CONFIG & CADENCE MEMORY
+# 2. PERSISTENCE & HISTORY ENGINE (DEDUPLICATION LEDGER)
 # ---------------------------------------------------------
 DATA_DIR = os.path.join(os.getcwd(), "data")
 FONTS_DIR = os.path.join(os.getcwd(), "fonts")
@@ -208,19 +205,25 @@ os.makedirs(FONTS_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, "studio_db.json")
 
 def load_db():
-    if os.path.exists(DB_PATH):
-        try:
-            with open(DB_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {
+    default_structure = {
         "scheduled_posts": [],
-        "blacklisted_headlines": [],
-        "blacklisted_backdrops": [],
+        "used_headlines": [],
+        "used_backdrops": [],
+        "last_philosopher": None,
         "last_scheduled_date": None,
         "default_time_ist": "17:30"
     }
+    if os.path.exists(DB_PATH):
+        try:
+            with open(DB_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                for k, v in default_structure.items():
+                    if k not in data:
+                        data[k] = v
+                return data
+        except Exception:
+            pass
+    return default_structure
 
 def save_db(data):
     with open(DB_PATH, "w", encoding="utf-8") as f:
@@ -266,7 +269,7 @@ def get_font(name, size):
         return ImageFont.load_default()
 
 # ---------------------------------------------------------
-# 4. CURATED 50 HIGH-ENGAGEMENT VISUAL VAULT
+# 4. 50 CURATED HIGH-ENGAGEMENT VISUAL VAULT
 # ---------------------------------------------------------
 EXPANDED_VAULT = {
     "CLASSICAL_STATUE": [
@@ -274,37 +277,68 @@ EXPANDED_VAULT = {
         {"name": "Chiaroscuro Hellenistic Bronze Philosopher", "url": "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&fit=crop&w=1080&h=1350&q=88"},
         {"name": "Weathered Greek Marble Profile", "url": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1080&h=1350&q=88"},
         {"name": "Roman Travertine Carved Relief", "url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Winged Victory of Samothrace Drapery", "url": "https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=1080&h=1350&q=88"}
+        {"name": "Winged Victory of Samothrace Drapery", "url": "https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Pensive Stoic Thinker in Museum Hall", "url": "https://images.unsplash.com/photo-1554907984-15263bfd63bd?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Marble Column Capital Detail", "url": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ],
     "FINE_ART_PAINTING": [
         {"name": "Epic Classical Battle Chiaroscuro", "url": "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=1080&h=1350&q=88"},
         {"name": "Renaissance Council in Deep Candlelight", "url": "https://images.unsplash.com/photo-1582561424760-0321d75e81fa?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Dramatic Historic Colonnade Oil Painting", "url": "https://images.unsplash.com/photo-1544717302-de2939b7ef71?auto=format&fit=crop&w=1080&h=1350&q=88"},
         {"name": "Atmospheric Classical Harbor Twilight", "url": "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Ancient Roman Forum Oil Panorama", "url": "https://images.unsplash.com/photo-1578321272176-b7bbc0679853?auto=format&fit=crop&w=1080&h=1350&q=88"}
+        {"name": "Baroque Chiaroscuro Figure Study", "url": "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Ancient Roman Forum Oil Panorama", "url": "https://images.unsplash.com/photo-1578321272176-b7bbc0679853?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Mythological Solitude Canvas", "url": "https://images.unsplash.com/photo-1579783901586-78822e0ac93f?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ],
     "SEA_AND_CLIFFS": [
         {"name": "Rugged Sea Cliffs Against Storm Surge", "url": "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=1080&h=1350&q=88"},
         {"name": "Dark Volcanic Coast & Breaking Ocean Swell", "url": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Sheer Atlantic Ocean Cliff Edge", "url": "https://images.unsplash.com/photo-1476673160081-cf065607f449?auto=format&fit=crop&w=1080&h=1350&q=88"}
+        {"name": "Sheer Atlantic Ocean Cliff Edge", "url": "https://images.unsplash.com/photo-1476673160081-cf065607f449?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Towering Sea Stacks in Heavy Surf", "url": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Nordic Basalt Waves at Dusk", "url": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Deep Oceanic Midnight Surge", "url": "https://images.unsplash.com/photo-1439405326854-014607f694d7?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Unbroken Stone Reef Facing Storm", "url": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ],
     "CITADEL_AND_ARCHES": [
         {"name": "Roman Colosseum Arches at Twilight", "url": "https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=1080&h=1350&q=88"},
         {"name": "Ancient Classical Stone Portico", "url": "https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Sunken Roman Temple Columns", "url": "https://images.unsplash.com/photo-1529154036614-a60975f5c760?auto=format&fit=crop&w=1080&h=1350&q=88"}
+        {"name": "Atmospheric Stone Fortress Ruins", "url": "https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Sunken Roman Temple Columns", "url": "https://images.unsplash.com/photo-1529154036614-a60975f5c760?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Monolithic Vaulted Stone Corridor", "url": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Antique Iron Gate to Classical Sanctuary", "url": "https://images.unsplash.com/photo-1533158307587-828f0a76ef46?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Pantheon Ceiling Oculus Rays", "url": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ],
     "ALPINE_AND_SUMMITS": [
         {"name": "Alpine Summit Above Clouds", "url": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Granite Mountain Ridge at Sunset", "url": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?auto=format&fit=crop&w=1080&h=1350&q=88"}
+        {"name": "Granite Mountain Ridge at Sunset", "url": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Solitary Peak in Morning Alpenglow", "url": "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Glacial Mountain Lake Reflection", "url": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Jagged Dolomite Ridge Above Fog", "url": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Towering Snow Summit in Solitude", "url": "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "High Altitude Glacier Plateau", "url": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1080&h=1350&q=88"}
+    ],
+    "MISTY_FOREST": [
+        {"name": "Misty Redwood Sunbeams in Silence", "url": "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Dark Pine Forest in Heavy Fog", "url": "https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Solitary Ancient Oak in Morning Mist", "url": "https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Evergreen Ridge Under Cloud Cover", "url": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Ancient Birch Forest Pathway", "url": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Sunbeams Breaking Through Deep Canopy", "url": "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Still Lake Surrounded by Foggy Pines", "url": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ],
     "MODERN_WORKSPACE": [
         {"name": "Quiet Architect Workspace with Clean Lines", "url": "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1080&h=1350&q=88"},
         {"name": "Minimalist Slate & Timber Study", "url": "https://images.unsplash.com/photo-1507842229451-7f01be7fe7ab?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Modern High-Rise Skyline at Dawn", "url": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1080&h=1350&q=88"}
+        {"name": "Morning Espresso & Leather Journal Focus", "url": "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Solitary Reader in Neoclassical Library", "url": "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Modern High-Rise Skyline at Dawn", "url": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Curated Minimal Desk & Ceramic Lamp", "url": "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Evening City Skyline from Quiet Study", "url": "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ]
 }
 
 # ---------------------------------------------------------
-# 5. DYNAMIC CADENCE & MEMORY ENGINE (24-HOUR CLOCK)
+# 5. DYNAMIC CADENCE & MEMORY ENGINE (24-HOUR FORMAT)
 # ---------------------------------------------------------
 def parse_time_str(t_str):
     try:
@@ -336,7 +370,7 @@ def calculate_next_slot(base_date=None, target_time_str="17:30"):
     return datetime.combine(next_d, sched_t)
 
 # ---------------------------------------------------------
-# 6. FAIL-SAFE GRAPHICS COMPOSITOR
+# 6. FAIL-SAFE GRAPHICS & IMAGE COMPOSITOR
 # ---------------------------------------------------------
 def wrap_text(draw, text, font, max_width):
     lines = []
@@ -447,7 +481,7 @@ def render_post_canvas(bg_img, post_data):
     stamp_brand(canvas)
     draw = ImageDraw.Draw(canvas)
     
-    # 1. Category with Drawn Vector Wings
+    # 1. Category Pill with Drawn Vector Wings
     cat_f = get_font("Cinzel_Bold", 26)
     clean_cat = post_data['category'].strip().upper()
     cw = draw.textlength(clean_cat, font=cat_f)
@@ -492,7 +526,7 @@ def render_post_canvas(bg_img, post_data):
         draw.text((bx, by), bl, font=body_f, fill=(240, 244, 250, 255))
         by += int(42 * 1.36)
         
-    # 5. Philosopher Attribution with Vector Wings
+    # 5. Attribution with Vector Wings
     att_f = get_font("Cinzel_Bold", 24)
     clean_att = post_data['attribution'].strip().upper()
     aw = draw.textlength(clean_att, font=att_f)
@@ -507,62 +541,80 @@ def render_post_canvas(bg_img, post_data):
     return canvas.convert("RGB")
 
 # ---------------------------------------------------------
-# 7. HIGH-SPEED AI SYNTHESIS PIPELINE
+# 7. ZERO-DUPLICATION AI SYNTHESIS PIPELINE
 # ---------------------------------------------------------
 PHILOSOPHERS_POOL = [
     "Marcus Aurelius", "Seneca", "Epictetus", "Friedrich Nietzsche", 
     "Arthur Schopenhauer", "Ralph Waldo Emerson", "Lao Tzu", "Sun Tzu", "Michel de Montaigne"
 ]
 
-def generate_stoic_concept_fast(raw_api_key, visual_theme, philosopher, custom_directive):
+def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custom_directive):
     clean_key = raw_api_key.strip().strip('"').strip("'")
     client = genai.Client(api_key=clean_key)
-    blacklist = db.get("blacklisted_headlines", [])
-    blacklist_str = "\n".join([f"- {h}" for h in blacklist[-40:]]) if blacklist else "None."
     
+    # 1. Collect all previously used headlines across lifetime of channel
+    used = set(db.get("used_headlines", []))
+    for p in db.get("scheduled_posts", []):
+        if p.get("headline"):
+            used.add(p["headline"].upper())
+            
+    recent_blacklist = list(used)[-60:]
+    blacklist_str = "\n".join([f"- {h}" for h in recent_blacklist]) if recent_blacklist else "None yet."
+
+    # 2. Rotate philosophers if random is selected
     target_philosopher = philosopher
     if philosopher in ["🎲 Random / AI Choice", "Any"]:
-        target_philosopher = random.choice(PHILOSOPHERS_POOL)
+        last_phil = db.get("last_philosopher")
+        available_phils = [p for p in PHILOSOPHERS_POOL if p != last_phil]
+        target_philosopher = random.choice(available_phils)
 
     prompt = f"""
-    Role: Creative Director for 'Echoes of Wisdom'.
+    You are the Senior Creative Director for 'Echoes of Wisdom'.
     Theme: {visual_theme}
-    Preferred Philosopher: {target_philosopher}
-    User Direction/Voice Input: {custom_directive or 'Synthesize an authoritative, timeless lesson of resilience and inner strength.'}
-    
-    STRICT BLACKLIST (DO NOT USE OR REPHRASE):
+    Featured Thinker: {target_philosopher}
+    User Direction/Focus: {custom_directive or 'Synthesize an original, profound, and impactful lesson on mental clarity and unshakeable discipline.'}
+
+    CRITICAL ANTI-DUPLICATION RULE:
+    The following headlines have ALREADY BEEN PUBLISHED. You are STRICTLY FORBIDDEN from generating any of these or close variations:
     {blacklist_str}
-    
-    Output JSON ONLY:
+
+    Requirements:
+    1. The headline must be 2 to 4 bold, commanding words (e.g., RULE YOUR DESIRE, SUFFER NOT TWICE, EMBRACE THE GAUNTLET).
+    2. The body quote must be 12 to 18 words explaining the hook with maximum emotional and philosophical weight.
+    3. The caption must include a compelling hook, the deep lesson, a debate question with 1️⃣/2️⃣ choices, and hashtags.
+
+    Output STRICT JSON ONLY:
     {{
-      "category": "CONCISE PILLAR (e.g. EMOTIONAL MASTERY, FORTITUDE, INNER CITADEL, DEEP FOCUS)",
-      "headline": "BOLD 2-4 WORD HOOK",
+      "category": "CONCISE PILLAR (e.g. INNER CITADEL, EMOTIONAL MASTERY, DEEP FOCUS, FORTITUDE, QUIET PRIDE)",
+      "headline": "FRESH UNIQUE 2-4 WORD HOOK",
       "body_text": "One powerful 12-18 word sentence explaining the hook.",
       "attribution": "{target_philosopher.upper()}",
       "post_caption": "Full Facebook/Instagram caption with hook, lesson, binary debate CTA (1️⃣/2️⃣), handles, and hashtags."
     }}
     """
 
-    for target_model in ["gemini-2.5-flash", "gemini-2.0-flash"]:
+    errs = []
+    for mod in ["gemini-2.5-flash", "gemini-2.0-flash"]:
         try:
             resp = client.models.generate_content(
-                model=target_model,
+                model=mod,
                 contents=prompt,
-                config=types.GenerateContentConfig(response_mime_type="application/json")
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.9
+                )
             )
             parsed = json.loads(resp.text)
             if "headline" in parsed and "body_text" in parsed:
-                return parsed, None
-        except Exception:
+                # Double-check that it is not in the blacklist
+                if parsed["headline"].upper() not in used:
+                    db["last_philosopher"] = target_philosopher
+                    return parsed, None
+        except Exception as e:
+            errs.append(f"{mod}: {e}")
             continue
 
-    return {
-        "category": "INNER CITADEL",
-        "headline": "STAND UNMOVED",
-        "body_text": "External turbulence has no power over the mind that chooses stillness above reaction.",
-        "attribution": "MARCUS AURELIUS",
-        "post_caption": "🏛️ MASTER YOUR RESPONSE.\n\nWhen external disrespect strikes:\n1️⃣ Guard your peace in absolute silence\n2️⃣ Allow the noise into your day\n\nDrop 1 or 2 below. 👇\n\n#Stoicism #MarcusAurelius #Wisdom"
-    }, None
+    return None, " | ".join(errs)
 
 # ---------------------------------------------------------
 # 8. OBSIDIAN DASHBOARD UI
@@ -570,12 +622,12 @@ def generate_stoic_concept_fast(raw_api_key, visual_theme, philosopher, custom_d
 st.markdown("""
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
     <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC;">
-        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v2.8 // AUTONOMOUS</span>
+        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v2.9 // ZERO-DUPE ENGINE</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Cadence Memory Initialization (Strict 24-Hour Military Format)
+# Cadence Memory Initialization
 default_time = db.get("default_time_ist", "17:30")
 saved_last_date_str = db.get("last_scheduled_date")
 saved_last_date = None
@@ -588,16 +640,16 @@ if saved_last_date_str:
 next_target_dt = calculate_next_slot(base_date=saved_last_date, target_time_str=default_time)
 formatted_time_24h = next_target_dt.strftime("%H:%M")
 
-# Telemetry Status Bar (Showing 24h Time)
+# Telemetry Status Bar
 st.markdown(f"""
 <div class="telemetry-bar">
     <div class="badge badge-green"><span class="dot"></span> ENGINE: READY</div>
-    <div class="badge badge-blue">⚡ GEMINI 2.5 FLASH</div>
+    <div class="badge badge-blue">⚡ ZERO-DUPLICATION ACTIVE</div>
     <div class="badge badge-amber">📅 NEXT DROP: {next_target_dt.strftime('%a, %b %d')} @ {formatted_time_24h} IST</div>
 </div>
 """, unsafe_allow_html=True)
 
-# Post-Lock Visual Confirmation Banner
+# Confirmation Banner
 if "lock_notification" in st.session_state:
     st.markdown(f"""
     <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10B981; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #34D399;">
@@ -606,7 +658,7 @@ if "lock_notification" in st.session_state:
     """, unsafe_allow_html=True)
     del st.session_state["lock_notification"]
 
-# Cadence & Schedule Manager Accordion
+# Cadence Manager Accordion
 with st.expander("📅 PUBLISHING CADENCE & TIME MANAGER", expanded=False):
     col_c1, col_c2 = st.columns(2)
     with col_c1:
@@ -622,19 +674,20 @@ with st.expander("📅 PUBLISHING CADENCE & TIME MANAGER", expanded=False):
         db["last_scheduled_date"] = custom_last_d.strftime("%Y-%m-%d")
         db["default_time_ist"] = custom_t.strftime("%H:%M")
         save_db(db)
-        st.session_state["lock_notification"] = f"✓ CADENCE PREFERENCE SAVED: Base date set to {db['last_scheduled_date']} @ {db['default_time_ist']} IST"
+        st.session_state["lock_notification"] = f"✓ CADENCE SAVED: Next slot advances from {db['last_scheduled_date']} @ {db['default_time_ist']} IST"
         st.rerun()
 
-# API Secret Check
+# API Key Resolution
 api_key = ""
 if "GEMINI_API_KEY" in st.secrets:
     api_key = str(st.secrets["GEMINI_API_KEY"]).strip().strip('"').strip("'")
 elif os.getenv("GEMINI_API_KEY"):
     api_key = str(os.getenv("GEMINI_API_KEY")).strip().strip('"').strip("'")
 
-if not api_key:
-    with st.expander("🔑 AUTHENTICATION REQUIRED", expanded=True):
-        api_key = st.text_input("Enter Gemini API Key", type="password", placeholder="AIzaSy...")
+with st.expander("🔑 API CREDENTIALS", expanded=(not bool(api_key))):
+    user_key = st.text_input("Gemini API Key", value=api_key, type="password", placeholder="AIzaSy...")
+    if user_key:
+        api_key = user_key.strip().strip('"').strip("'")
 
 # Studio HUD Controls
 with st.expander("🎛️ STUDIO CONTROLS & DIRECTIVES", expanded=True):
@@ -647,6 +700,7 @@ with st.expander("🎛️ STUDIO CONTROLS & DIRECTIVES", expanded=True):
             "SEA_AND_CLIFFS",
             "CITADEL_AND_ARCHES",
             "ALPINE_AND_SUMMITS",
+            "MISTY_FOREST",
             "MODERN_WORKSPACE"
         ]
         selected_theme = st.selectbox("Visual Backdrop", backdrop_options)
@@ -725,39 +779,48 @@ with st.expander("🎛️ STUDIO CONTROLS & DIRECTIVES", expanded=True):
 generate_btn = st.button("🚀 Render Master Social Post", type="primary")
 
 # ---------------------------------------------------------
-# 9. EXECUTION PIPELINE
+# 9. EXECUTION PIPELINE (ROUND-ROBIN IMAGE ROTATION)
 # ---------------------------------------------------------
 if generate_btn:
     if not api_key:
-        st.error("Missing Gemini API Key.")
+        st.error("Missing Gemini API Key. Open the '🔑 API CREDENTIALS' panel above.")
     else:
-        with st.spinner("⚡ Synthesizing concept & rendering 4K canvas..."):
+        with st.spinner("⚡ Synthesizing unique concept & checking against history..."):
             theme_choice = selected_theme
             if theme_choice.startswith("🎲"):
                 theme_choice = random.choice(list(EXPANDED_VAULT.keys()))
                 
-            concept, _ = generate_stoic_concept_fast(api_key, theme_choice, selected_philosopher, custom_input)
+            concept, err = generate_stoic_concept_deduped(api_key, theme_choice, selected_philosopher, custom_input)
             
-            vault_items = EXPANDED_VAULT.get(theme_choice, EXPANDED_VAULT["CLASSICAL_STATUE"])
-            b_list = db.get("blacklisted_backdrops", [])
-            available = [it for it in vault_items if it["name"] not in b_list]
-            if not available:
-                available = vault_items
-            chosen_item = random.choice(available)
-            
-            bg_image = fetch_image_resilient(chosen_item["url"], available)
-            canvas_result = render_post_canvas(bg_image, concept)
-            
-            st.session_state["active_post"] = {
-                "concept": concept,
-                "canvas": canvas_result,
-                "backdrop_name": chosen_item["name"],
-                "target_date": next_target_dt.strftime("%Y-%m-%d"),
-                "target_time_display": formatted_time_24h
-            }
+            if err or not concept:
+                st.error(f"⚠️ Synthesis Blocked: {err}. Please verify your Gemini API key.")
+            else:
+                vault_items = EXPANDED_VAULT.get(theme_choice, EXPANDED_VAULT["CLASSICAL_STATUE"])
+                
+                # Round-robin backdrop selection: Never repeat until pool exhausted
+                used_bd = set(db.get("used_backdrops", []))
+                fresh_backdrops = [it for it in vault_items if it["name"] not in used_bd]
+                
+                if not fresh_backdrops:
+                    # Reset pool for this theme once all have been cycled
+                    db["used_backdrops"] = [b for b in db.get("used_backdrops", []) if b not in [it["name"] for it in vault_items]]
+                    fresh_backdrops = vault_items
+
+                chosen_item = random.choice(fresh_backdrops)
+                
+                bg_image = fetch_image_resilient(chosen_item["url"], vault_items)
+                canvas_result = render_post_canvas(bg_image, concept)
+                
+                st.session_state["active_post"] = {
+                    "concept": concept,
+                    "canvas": canvas_result,
+                    "backdrop_name": chosen_item["name"],
+                    "target_date": next_target_dt.strftime("%Y-%m-%d"),
+                    "target_time_display": formatted_time_24h
+                }
 
 # ---------------------------------------------------------
-# 10. ACTIVE ASSET TERMINAL & 1-TAP CLIPBOARD COPY
+# 10. ACTIVE ASSET TERMINAL & 1-TAP INLINE CLIPBOARD
 # ---------------------------------------------------------
 if "active_post" in st.session_state:
     post = st.session_state["active_post"]
@@ -787,60 +850,86 @@ if "active_post" in st.session_state:
     
     st.text_area("Caption (Ready for Meta Business Suite)", concept["post_caption"], height=160)
     
-    # 1-Tap Clipboard Copy Deck
+    # Direct In-Button Copy
     escaped_caption = json.dumps(concept["post_caption"])
     components.html(f"""
-    <div style="font-family: 'JetBrains Mono', monospace; margin: 4px 0 10px 0;">
-        <button id="copyBtn" onclick="copyCaption()" style="width: 100%; height: 2.8rem; background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; letter-spacing: 0.04em; transition: all 0.2s;">
+    <div style="margin: 0; padding: 0;">
+        <button id="copyBtn" onclick="copyCaption()" style="width: 100%; height: 2.85rem; background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 13px; cursor: pointer; letter-spacing: 0.04em; transition: all 0.2s;">
             📋 COPY CAPTION TO CLIPBOARD
         </button>
-        <div id="copyToast" style="display: none; text-align: center; color: #34D399; font-size: 12px; margin-top: 6px; font-weight: bold;">
-            ✓ CAPTION COPIED TO CLIPBOARD
-        </div>
     </div>
     <script>
         function copyCaption() {{
             var text = {escaped_caption};
-            navigator.clipboard.writeText(text).then(function() {{
+            function setSuccess() {{
                 var btn = document.getElementById("copyBtn");
-                var toast = document.getElementById("copyToast");
-                btn.style.background = "rgba(16, 185, 129, 0.2)";
-                btn.style.color = "#34D399";
-                btn.style.borderColor = "#10B981";
-                toast.style.display = "block";
+                btn.innerText = "✓ COPIED TO CLIPBOARD!";
+                btn.style.background = "#059669";
+                btn.style.color = "#FFFFFF";
+                btn.style.borderColor = "#34D399";
                 setTimeout(function() {{
+                    btn.innerText = "📋 COPY CAPTION TO CLIPBOARD";
                     btn.style.background = "rgba(56, 189, 248, 0.15)";
                     btn.style.color = "#38BDF8";
                     btn.style.borderColor = "rgba(56, 189, 248, 0.4)";
-                    toast.style.display = "none";
                 }}, 2500);
-            }});
+            }}
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {{
+                navigator.clipboard.writeText(text).then(setSuccess).catch(function() {{
+                    fallbackCopy(text);
+                }});
+            }} else {{
+                fallbackCopy(text);
+            }}
+
+            function fallbackCopy(str) {{
+                var el = document.createElement('textarea');
+                el.value = str;
+                el.setAttribute('readonly', '');
+                el.style.position = 'absolute';
+                el.style.left = '-9999px';
+                document.body.appendChild(el);
+                el.select();
+                try {{
+                    document.execCommand('copy');
+                    setSuccess();
+                }} catch(err) {{}}
+                document.body.removeChild(el);
+            }}
         }}
     </script>
-    """, height=65)
+    """, height=50)
     
     col_a, col_b = st.columns(2)
     with col_a:
         if st.button("✅ Lock & Advance Date"):
-            # Record post to disk
+            # Record post and log to deduplication ledger
             db["scheduled_posts"].append({
                 "date": post["target_date"],
                 "time": post.get("target_time_display", "17:30"),
                 "headline": concept["headline"],
                 "filename": filename
             })
+            if concept["headline"].upper() not in db.get("used_headlines", []):
+                db["used_headlines"].append(concept["headline"].upper())
+                
+            if post["backdrop_name"] not in db.get("used_backdrops", []):
+                db["used_backdrops"].append(post["backdrop_name"])
+
             db["last_scheduled_date"] = post["target_date"]
             save_db(db)
             
-            # Set confirmation toast and clear current active view
             st.session_state["lock_notification"] = f"✓ LOCKED: '{concept['headline']}' logged for {post['target_date']} @ {post.get('target_time_display', '17:30')} IST. Slot advanced!"
             del st.session_state["active_post"]
             st.rerun()
             
     with col_b:
         if st.button("❌ Blacklist & Regenerate"):
-            db["blacklisted_headlines"].append(concept["headline"])
-            db["blacklisted_backdrops"].append(post["backdrop_name"])
+            if concept["headline"].upper() not in db.get("used_headlines", []):
+                db["used_headlines"].append(concept["headline"].upper())
+            if post["backdrop_name"] not in db.get("used_backdrops", []):
+                db["used_backdrops"].append(post["backdrop_name"])
             save_db(db)
             del st.session_state["active_post"]
             st.session_state["lock_notification"] = f"⚠ Concept '{concept['headline']}' blacklisted. Re-rolling visual & prompt..."
