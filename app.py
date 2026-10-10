@@ -13,7 +13,7 @@ from google import genai
 from google.genai import types
 
 # ---------------------------------------------------------
-# 1. PAGE SETUP & OBSIDIAN TECH UI
+# 1. PAGE SETUP & OBSIDIAN TECH UI (NO CUTOFF / 24H LOCK)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Echoes Studio // Terminal",
@@ -42,7 +42,7 @@ st.markdown("""
     
     .block-container {
         padding-top: 4.2rem !important;
-        padding-bottom: 3rem !important;
+        padding-bottom: 3.5rem !important;
         max-width: 680px !important;
     }
 
@@ -172,7 +172,7 @@ st.markdown("""
         box-shadow: 0 0 28px rgba(52, 211, 153, 0.5) !important;
     }
 
-    /* Telemetry Pill Badges */
+    /* Telemetry Badges */
     .telemetry-bar {
         display: flex;
         gap: 8px;
@@ -304,7 +304,7 @@ EXPANDED_VAULT = {
 }
 
 # ---------------------------------------------------------
-# 5. DYNAMIC CADENCE & MEMORY ENGINE
+# 5. DYNAMIC CADENCE & MEMORY ENGINE (24-HOUR CLOCK)
 # ---------------------------------------------------------
 def parse_time_str(t_str):
     try:
@@ -570,12 +570,12 @@ def generate_stoic_concept_fast(raw_api_key, visual_theme, philosopher, custom_d
 st.markdown("""
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
     <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC;">
-        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v2.7 // CADENCE</span>
+        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v2.8 // AUTONOMOUS</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Cadence Memory Initialization
+# Cadence Memory Initialization (Strict 24-Hour Military Format)
 default_time = db.get("default_time_ist", "17:30")
 saved_last_date_str = db.get("last_scheduled_date")
 saved_last_date = None
@@ -586,15 +586,25 @@ if saved_last_date_str:
         pass
 
 next_target_dt = calculate_next_slot(base_date=saved_last_date, target_time_str=default_time)
+formatted_time_24h = next_target_dt.strftime("%H:%M")
 
-# Telemetry Status Bar
+# Telemetry Status Bar (Showing 24h Time)
 st.markdown(f"""
 <div class="telemetry-bar">
     <div class="badge badge-green"><span class="dot"></span> ENGINE: READY</div>
     <div class="badge badge-blue">⚡ GEMINI 2.5 FLASH</div>
-    <div class="badge badge-amber">📅 NEXT DROP: {next_target_dt.strftime('%a, %b %d')} @ {next_target_dt.strftime('%I:%M %p')} IST</div>
+    <div class="badge badge-amber">📅 NEXT DROP: {next_target_dt.strftime('%a, %b %d')} @ {formatted_time_24h} IST</div>
 </div>
 """, unsafe_allow_html=True)
+
+# Post-Lock Visual Confirmation Banner
+if "lock_notification" in st.session_state:
+    st.markdown(f"""
+    <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10B981; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #34D399;">
+        {st.session_state['lock_notification']}
+    </div>
+    """, unsafe_allow_html=True)
+    del st.session_state["lock_notification"]
 
 # Cadence & Schedule Manager Accordion
 with st.expander("📅 PUBLISHING CADENCE & TIME MANAGER", expanded=False):
@@ -606,13 +616,13 @@ with st.expander("📅 PUBLISHING CADENCE & TIME MANAGER", expanded=False):
         )
     with col_c2:
         parsed_t = parse_time_str(default_time)
-        custom_t = st.time_input("Daily Drop Time (IST)", value=parsed_t)
+        custom_t = st.time_input("Daily Drop Time (24h IST)", value=parsed_t)
 
     if st.button("💾 Save Schedule Cadence Preference"):
         db["last_scheduled_date"] = custom_last_d.strftime("%Y-%m-%d")
         db["default_time_ist"] = custom_t.strftime("%H:%M")
         save_db(db)
-        st.success("Cadence settings updated and locked!")
+        st.session_state["lock_notification"] = f"✓ CADENCE PREFERENCE SAVED: Base date set to {db['last_scheduled_date']} @ {db['default_time_ist']} IST"
         st.rerun()
 
 # API Secret Check
@@ -656,7 +666,6 @@ with st.expander("🎛️ STUDIO CONTROLS & DIRECTIVES", expanded=True):
         ]
         selected_philosopher = st.selectbox("Philosopher", philosopher_options)
 
-    # Voice Dictation Card
     components.html("""
     <div style="font-family: 'JetBrains Mono', monospace; margin: 4px 0 10px 0;">
         <button id="micBtn" onclick="toggleSpeech()" style="background: rgba(56, 189, 248, 0.12); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); padding: 9px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; letter-spacing: 0.05em; transition: all 0.2s;">
@@ -744,7 +753,7 @@ if generate_btn:
                 "canvas": canvas_result,
                 "backdrop_name": chosen_item["name"],
                 "target_date": next_target_dt.strftime("%Y-%m-%d"),
-                "target_time_display": next_target_dt.strftime("%I:%M %p")
+                "target_time_display": formatted_time_24h
             }
 
 # ---------------------------------------------------------
@@ -758,7 +767,7 @@ if "active_post" in st.session_state:
     st.divider()
     st.markdown(f"""
     <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #38BDF8; font-weight: 700; margin-bottom: 8px;">
-        TARGET SCHEDULE // {post['target_date']} @ {post.get('target_time_display', '05:30 PM')} IST
+        TARGET SCHEDULE // {post['target_date']} @ {post.get('target_time_display', '17:30')} IST
     </div>
     """, unsafe_allow_html=True)
     
@@ -778,7 +787,7 @@ if "active_post" in st.session_state:
     
     st.text_area("Caption (Ready for Meta Business Suite)", concept["post_caption"], height=160)
     
-    # 1-Tap Clipboard Copy Component
+    # 1-Tap Clipboard Copy Deck
     escaped_caption = json.dumps(concept["post_caption"])
     components.html(f"""
     <div style="font-family: 'JetBrains Mono', monospace; margin: 4px 0 10px 0;">
@@ -813,14 +822,19 @@ if "active_post" in st.session_state:
     col_a, col_b = st.columns(2)
     with col_a:
         if st.button("✅ Lock & Advance Date"):
+            # Record post to disk
             db["scheduled_posts"].append({
                 "date": post["target_date"],
+                "time": post.get("target_time_display", "17:30"),
                 "headline": concept["headline"],
                 "filename": filename
             })
             db["last_scheduled_date"] = post["target_date"]
             save_db(db)
-            st.success(f"Scheduled for {post['target_date']}! Next date queued.")
+            
+            # Set confirmation toast and clear current active view
+            st.session_state["lock_notification"] = f"✓ LOCKED: '{concept['headline']}' logged for {post['target_date']} @ {post.get('target_time_display', '17:30')} IST. Slot advanced!"
+            del st.session_state["active_post"]
             st.rerun()
             
     with col_b:
@@ -829,7 +843,7 @@ if "active_post" in st.session_state:
             db["blacklisted_backdrops"].append(post["backdrop_name"])
             save_db(db)
             del st.session_state["active_post"]
-            st.warning("Concept blacklisted. Ready for re-roll.")
+            st.session_state["lock_notification"] = f"⚠ Concept '{concept['headline']}' blacklisted. Re-rolling visual & prompt..."
             st.rerun()
 
     st.markdown("""
@@ -841,3 +855,21 @@ if "active_post" in st.session_state:
         </a>
     </div>
     """, unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# 11. AUDIT LOG & SCHEDULED QUEUE VIEWER
+# ---------------------------------------------------------
+if db.get("scheduled_posts"):
+    with st.expander(f"📋 SCHEDULED QUEUE & LOGGED POSTS ({len(db['scheduled_posts'])})", expanded=False):
+        for idx, item in enumerate(reversed(db["scheduled_posts"])):
+            st.markdown(f"""
+            <div style="background: #0A0F1D; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+                <div>
+                    <span style="color: #38BDF8; font-weight: 700;">{item.get('date')}</span>
+                    <span style="color: #64748B;"> @ </span>
+                    <span style="color: #FBBF24;">{item.get('time', '17:30')} IST</span>
+                    <div style="color: #F8FAFC; font-weight: 600; margin-top: 2px;">{item.get('headline')}</div>
+                </div>
+                <div style="color: #34D399; font-weight: 700; font-size: 11px;">● SCHEDULED</div>
+            </div>
+            """, unsafe_allow_html=True)
