@@ -3,7 +3,7 @@ import io
 import json
 import re
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
 import requests
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -13,7 +13,7 @@ from google import genai
 from google.genai import types
 
 # ---------------------------------------------------------
-# 1. PAGE SETUP & OBSIDIAN TECH UI
+# 1. PAGE SETUP & OBSIDIAN TECH UI (NO CUTOFF / HIGH CONTRAST)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Echoes Studio // Terminal",
@@ -22,10 +22,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# High-Tech Cyber-Stoic Dark Glass Styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    /* Transparent header to prevent top clipping */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        height: 2.5rem !important;
+    }
 
     /* Global Dark Canvas */
     .stApp {
@@ -36,51 +41,68 @@ st.markdown("""
     }
     
     .block-container {
-        padding-top: 1.5rem !important;
-        padding-bottom: 2.5rem !important;
+        padding-top: 4.2rem !important;
+        padding-bottom: 3rem !important;
         max-width: 680px !important;
     }
 
-    /* Headings */
-    h1, h2, h3 {
-        font-family: 'Space Grotesk', sans-serif !important;
-        letter-spacing: -0.02em !important;
-        color: #F8FAFC !important;
-    }
-
-    /* Glass Cards / Expanders */
+    /* Expander / Accordion Fixes (Eliminates White Backgrounds) */
     div[data-testid="stExpander"] {
-        background: rgba(15, 23, 42, 0.65) !important;
-        backdrop-filter: blur(14px) !important;
-        border: 1px solid rgba(56, 189, 248, 0.15) !important;
+        background: #0E1626 !important;
+        border: 1px solid rgba(56, 189, 248, 0.25) !important;
         border-radius: 12px !important;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
         overflow: hidden !important;
+        margin-bottom: 1rem !important;
     }
     
     div[data-testid="stExpander"] summary {
+        background: #111B30 !important;
+        color: #38BDF8 !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 13px !important;
+        font-weight: 700 !important;
         letter-spacing: 0.05em !important;
-        color: #94A3B8 !important;
-        padding: 10px 14px !important;
+        padding: 12px 16px !important;
+        border-bottom: 1px solid rgba(56, 189, 248, 0.15) !important;
     }
 
-    /* Inputs & Selectboxes */
-    div[data-baseweb="select"] > div, .stTextInput>div>div>input, .stTextArea textarea {
-        background-color: #0E1626 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    div[data-testid="stExpander"] summary:hover {
+        color: #7DD3FC !important;
+    }
+
+    /* High-Contrast Input Labels */
+    label[data-testid="stWidgetLabel"] p, .stTextInput label p, .stSelectbox label p, .stDateInput label p, .stTimeInput label p {
+        color: #94A3B8 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.06em !important;
+        text-transform: uppercase !important;
+    }
+
+    /* Dropdown Menus & Inputs */
+    div[data-baseweb="select"] > div {
+        background-color: #0A0F1D !important;
+        border: 1px solid rgba(56, 189, 248, 0.25) !important;
         border-radius: 8px !important;
-        color: #F1F5F9 !important;
+        color: #F8FAFC !important;
+    }
+
+    div[data-baseweb="select"] span {
+        color: #F8FAFC !important;
+    }
+
+    .stTextInput>div>div>input, .stTextArea textarea {
+        background-color: #0A0F1D !important;
+        border: 1px solid rgba(56, 189, 248, 0.25) !important;
+        border-radius: 8px !important;
+        color: #F8FAFC !important;
         font-family: 'Space Grotesk', sans-serif !important;
         font-size: 14px !important;
     }
-    div[data-baseweb="select"] > div:hover, .stTextInput>div>div>input:focus, .stTextArea textarea:focus {
-        border-color: #38BDF8 !important;
-        box-shadow: 0 0 12px rgba(56, 189, 248, 0.25) !important;
-    }
 
-    /* Primary Launch Button */
+    /* Primary Action Buttons */
     .stButton>button[kind="primary"] {
         background: linear-gradient(135deg, #0284C7 0%, #0369A1 50%, #075985 100%) !important;
         color: #FFFFFF !important;
@@ -89,29 +111,13 @@ st.markdown("""
         height: 3.4rem !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-weight: 700 !important;
-        font-size: 15px !important;
-        letter-spacing: 0.04em !important;
+        font-size: 14px !important;
+        letter-spacing: 0.05em !important;
         text-transform: uppercase !important;
         box-shadow: 0 0 25px rgba(2, 132, 199, 0.35) !important;
         transition: all 0.2s ease !important;
     }
-    .stButton>button[kind="primary"]:hover {
-        transform: translateY(-1px) !important;
-        box-shadow: 0 0 35px rgba(56, 189, 248, 0.6) !important;
-    }
 
-    /* Secondary Buttons */
-    .stButton>button:not([kind="primary"]) {
-        background: #111A2E !important;
-        color: #CBD5E1 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 8px !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        font-weight: 600 !important;
-        font-size: 13px !important;
-    }
-
-    /* Gallery Download Button */
     .stDownloadButton>button {
         background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
         color: white !important;
@@ -134,7 +140,7 @@ st.markdown("""
         font-family: 'JetBrains Mono', monospace;
         font-size: 11px;
         font-weight: 600;
-        padding: 4px 10px;
+        padding: 5px 12px;
         border-radius: 6px;
         letter-spacing: 0.05em;
         display: inline-flex;
@@ -144,13 +150,12 @@ st.markdown("""
     .badge-green { background: rgba(16, 185, 129, 0.12); color: #34D399; border: 1px solid rgba(52, 211, 153, 0.25); }
     .badge-blue  { background: rgba(56, 189, 248, 0.12); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.25); }
     .badge-amber { background: rgba(245, 158, 11, 0.12); color: #FBBF24; border: 1px solid rgba(251, 191, 36, 0.25); }
-
     .dot { width: 6px; height: 6px; border-radius: 50%; background-color: #34D399; box-shadow: 0 0 8px #34D399; }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. PERSISTENCE CONFIG
+# 2. PERSISTENCE CONFIG & CADENCE MEMORY
 # ---------------------------------------------------------
 DATA_DIR = os.path.join(os.getcwd(), "data")
 FONTS_DIR = os.path.join(os.getcwd(), "fonts")
@@ -170,7 +175,8 @@ def load_db():
         "scheduled_posts": [],
         "blacklisted_headlines": [],
         "blacklisted_backdrops": [],
-        "last_scheduled_date": None
+        "last_scheduled_date": None,
+        "default_time_ist": "17:30"
     }
 
 def save_db(data):
@@ -255,23 +261,39 @@ EXPANDED_VAULT = {
 }
 
 # ---------------------------------------------------------
-# 5. CADENCE ENGINE
+# 5. DYNAMIC CADENCE & MEMORY ENGINE
 # ---------------------------------------------------------
-def get_next_recommended_slot():
+def parse_time_str(t_str):
+    try:
+        parts = t_str.split(":")
+        return time(int(parts[0]), int(parts[1]))
+    except Exception:
+        return time(17, 30)
+
+def calculate_next_slot(base_date=None, target_time_str="17:30"):
     now_ist = datetime.now(timezone(timedelta(hours=5, minutes=30)))
-    last_date_str = db.get("last_scheduled_date")
-    if last_date_str:
-        try:
-            last_date = datetime.strptime(last_date_str, "%Y-%m-%d").date()
-            candidate = max(last_date + timedelta(days=1), now_ist.date())
-        except ValueError:
-            candidate = now_ist.date() + timedelta(days=1)
+    sched_t = parse_time_str(target_time_str)
+    
+    if base_date:
+        next_d = base_date + timedelta(days=1)
     else:
-        candidate = now_ist.date() if now_ist.hour < 16 else (now_ist.date() + timedelta(days=1))
-    return candidate
+        last_d_str = db.get("last_scheduled_date")
+        if last_d_str:
+            try:
+                last_d = datetime.strptime(last_d_str, "%Y-%m-%d").date()
+                next_d = max(last_d + timedelta(days=1), now_ist.date())
+            except ValueError:
+                next_d = now_ist.date() + timedelta(days=1)
+        else:
+            if now_ist.time() < sched_t:
+                next_d = now_ist.date()
+            else:
+                next_d = now_ist.date() + timedelta(days=1)
+                
+    return datetime.combine(next_d, sched_t)
 
 # ---------------------------------------------------------
-# 6. FAIL-SAFE GRAPHICS & IMAGE COMPOSITOR
+# 6. FAIL-SAFE GRAPHICS COMPOSITOR
 # ---------------------------------------------------------
 def wrap_text(draw, text, font, max_width):
     lines = []
@@ -290,18 +312,10 @@ def wrap_text(draw, text, font, max_width):
     return lines
 
 def fetch_image_resilient(chosen_url, backup_vault_items=None):
-    """
-    Bulletproof multi-tier image fetcher:
-    1. Attempts the primary URL with realistic browser headers.
-    2. Validates status code, content-type, and decodes safely.
-    3. Fails over to secondary candidates if rate-limited.
-    4. Generates an atmospheric cinematic slate gradient if all CDNs fail.
-    """
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"
     }
-    
     candidates = [chosen_url]
     if backup_vault_items:
         candidates.extend([it["url"] for it in backup_vault_items if it.get("url") != chosen_url])
@@ -315,7 +329,6 @@ def fetch_image_resilient(chosen_url, backup_vault_items=None):
         except Exception:
             continue
             
-    # Procedural Cinematic Canvas Fallback
     base = Image.new("RGB", (1080, 1350), (12, 16, 24))
     draw = ImageDraw.Draw(base)
     for y in range(1350):
@@ -339,12 +352,10 @@ def stamp_brand(canvas):
             lw_orig, lh_orig = raw_logo.size
             min_dim = min(lw_orig, lh_orig)
             
-            # Center crop to square
             left = (lw_orig - min_dim) // 2
             top = (lh_orig - min_dim) // 2
             raw_logo = raw_logo.crop((left, top, left + min_dim, top + min_dim))
             
-            # Antialiased circular cutout
             scale = 4
             big_size = (min_dim * scale, min_dim * scale)
             big_mask = Image.new("L", big_size, 0)
@@ -353,7 +364,6 @@ def stamp_brand(canvas):
             circle_mask = big_mask.resize((min_dim, min_dim), Image.Resampling.LANCZOS)
             raw_logo.putalpha(circle_mask)
             
-            # Stamp with ambient drop shadow
             target_size = 120
             raw_logo.thumbnail((target_size, target_size), Image.Resampling.LANCZOS)
             final_w, final_h = raw_logo.size
@@ -372,7 +382,6 @@ def stamp_brand(canvas):
         except Exception:
             pass
 
-    # Typographic Fallback Emblem
     draw = ImageDraw.Draw(canvas)
     crest_f = get_font("Cinzel_Bold", 20)
     crest_t = "E C H O E S   O F   W I S D O M"
@@ -384,7 +393,6 @@ def render_post_canvas(bg_img, post_data):
     w, h = 1080, 1350
     canvas = bg_img.convert("RGBA")
     
-    # Seamless Vignette Scrim
     scrim = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     s_draw = ImageDraw.Draw(scrim)
     for y in range(h):
@@ -396,7 +404,7 @@ def render_post_canvas(bg_img, post_data):
     stamp_brand(canvas)
     draw = ImageDraw.Draw(canvas)
     
-    # 1. Category Header with Drawn Vector Wings (Zero Tofu Risk)
+    # 1. Category with Drawn Vector Wings
     cat_f = get_font("Cinzel_Bold", 26)
     clean_cat = post_data['category'].strip().upper()
     cw = draw.textlength(clean_cat, font=cat_f)
@@ -409,7 +417,7 @@ def render_post_canvas(bg_img, post_data):
     draw.line([(cx - gap - wing_w, line_y), (cx - gap, line_y)], fill=(218, 175, 55, 210), width=2)
     draw.line([(cx + cw + gap, line_y), (cx + cw + gap + wing_w, line_y)], fill=(218, 175, 55, 210), width=2)
     
-    # 2. Headline with Dual Drop Shadows
+    # 2. Headline with Dual Shadows
     hl_f = get_font("Cinzel_Bold", 88)
     hl_lines = wrap_text(draw, post_data['headline'].upper(), hl_f, 860)
     line_h = int(88 * 1.28)
@@ -425,7 +433,7 @@ def render_post_canvas(bg_img, post_data):
         draw.text((lx + 2, ly + 4), line, font=hl_f, fill=(0, 0, 0, 240))
         draw.text((lx, ly), line, font=hl_f, fill=(255, 253, 242, 255))
         
-    # 3. Central Hairline Divider
+    # 3. Central Divider
     div_y = start_y + total_hl_h + 35
     draw.line([(w // 2 - 80, div_y), (w // 2 + 80, div_y)], fill=(218, 175, 55, 210), width=2)
     
@@ -441,7 +449,7 @@ def render_post_canvas(bg_img, post_data):
         draw.text((bx, by), bl, font=body_f, fill=(240, 244, 250, 255))
         by += int(42 * 1.36)
         
-    # 5. Philosopher Attribution with Drawn Vector Wings (Zero Tofu Risk)
+    # 5. Philosopher Attribution with Vector Wings
     att_f = get_font("Cinzel_Bold", 24)
     clean_att = post_data['attribution'].strip().upper()
     aw = draw.textlength(clean_att, font=att_f)
@@ -456,7 +464,7 @@ def render_post_canvas(bg_img, post_data):
     return canvas.convert("RGB")
 
 # ---------------------------------------------------------
-# 7. HIGH-SPEED DIRECT AI SYNTHESIS PIPELINE
+# 7. HIGH-SPEED AI SYNTHESIS PIPELINE
 # ---------------------------------------------------------
 PHILOSOPHERS_POOL = [
     "Marcus Aurelius", "Seneca", "Epictetus", "Friedrich Nietzsche", 
@@ -492,7 +500,6 @@ def generate_stoic_concept_fast(raw_api_key, visual_theme, philosopher, custom_d
     }}
     """
 
-    # Direct fast-lane execution
     for target_model in ["gemini-2.5-flash", "gemini-2.0-flash"]:
         try:
             resp = client.models.generate_content(
@@ -506,7 +513,6 @@ def generate_stoic_concept_fast(raw_api_key, visual_theme, philosopher, custom_d
         except Exception:
             continue
 
-    # Zero-delay failover
     return {
         "category": "INNER CITADEL",
         "headline": "STAND UNMOVED",
@@ -519,22 +525,52 @@ def generate_stoic_concept_fast(raw_api_key, visual_theme, philosopher, custom_d
 # 8. OBSIDIAN DASHBOARD UI
 # ---------------------------------------------------------
 st.markdown("""
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-    <div style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC;">
-        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v2.6 // PRO</span>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC;">
+        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v2.7 // CADENCE</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
+# Cadence Memory Initialization
+default_time = db.get("default_time_ist", "17:30")
+saved_last_date_str = db.get("last_scheduled_date")
+saved_last_date = None
+if saved_last_date_str:
+    try:
+        saved_last_date = datetime.strptime(saved_last_date_str, "%Y-%m-%d").date()
+    except Exception:
+        pass
+
+next_target_dt = calculate_next_slot(base_date=saved_last_date, target_time_str=default_time)
+
 # Telemetry Status Bar
-rec_slot = get_next_recommended_slot()
 st.markdown(f"""
 <div class="telemetry-bar">
-    <div class="badge badge-green"><span class="dot"></span> ENGINE: ONLINE</div>
+    <div class="badge badge-green"><span class="dot"></span> ENGINE: READY</div>
     <div class="badge badge-blue">⚡ GEMINI 2.5 FLASH</div>
-    <div class="badge badge-amber">📅 NEXT DROP: {rec_slot.strftime('%a, %b %d')} @ 5:30 PM IST</div>
+    <div class="badge badge-amber">📅 NEXT DROP: {next_target_dt.strftime('%a, %b %d')} @ {next_target_dt.strftime('%I:%M %p')} IST</div>
 </div>
 """, unsafe_allow_html=True)
+
+# Cadence & Schedule Manager Accordion
+with st.expander("📅 PUBLISHING CADENCE & TIME MANAGER", expanded=False):
+    col_c1, col_c2 = st.columns(2)
+    with col_c1:
+        custom_last_d = st.date_input(
+            "Last Scheduled Date",
+            value=saved_last_date if saved_last_date else datetime.now(timezone(timedelta(hours=5, minutes=30))).date()
+        )
+    with col_c2:
+        parsed_t = parse_time_str(default_time)
+        custom_t = st.time_input("Daily Drop Time (IST)", value=parsed_t)
+
+    if st.button("💾 Save Schedule Cadence Preference"):
+        db["last_scheduled_date"] = custom_last_d.strftime("%Y-%m-%d")
+        db["default_time_ist"] = custom_t.strftime("%H:%M")
+        save_db(db)
+        st.success("Cadence settings updated and locked!")
+        st.rerun()
 
 # API Secret Check
 api_key = ""
@@ -577,7 +613,7 @@ with st.expander("🎛️ STUDIO CONTROLS & DIRECTIVES", expanded=True):
         ]
         selected_philosopher = st.selectbox("Philosopher", philosopher_options)
 
-    # Cyber-styled Voice Dictation Card
+    # Voice Dictation Card
     components.html("""
     <div style="font-family: 'JetBrains Mono', monospace; margin: 4px 0 10px 0;">
         <button id="micBtn" onclick="toggleSpeech()" style="background: rgba(56, 189, 248, 0.12); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); padding: 9px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; letter-spacing: 0.05em; transition: all 0.2s;">
@@ -657,7 +693,6 @@ if generate_btn:
                 available = vault_items
             chosen_item = random.choice(available)
             
-            # Resilient fail-safe image loader
             bg_image = fetch_image_resilient(chosen_item["url"], available)
             canvas_result = render_post_canvas(bg_image, concept)
             
@@ -665,11 +700,12 @@ if generate_btn:
                 "concept": concept,
                 "canvas": canvas_result,
                 "backdrop_name": chosen_item["name"],
-                "target_date": rec_slot.strftime("%Y-%m-%d")
+                "target_date": next_target_dt.strftime("%Y-%m-%d"),
+                "target_time_display": next_target_dt.strftime("%I:%M %p")
             }
 
 # ---------------------------------------------------------
-# 10. ACTIVE ASSET TERMINAL
+# 10. ACTIVE ASSET TERMINAL & 1-TAP CLIPBOARD COPY
 # ---------------------------------------------------------
 if "active_post" in st.session_state:
     post = st.session_state["active_post"]
@@ -679,7 +715,7 @@ if "active_post" in st.session_state:
     st.divider()
     st.markdown(f"""
     <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #38BDF8; font-weight: 700; margin-bottom: 8px;">
-        PREVIEW // {concept['headline']}
+        TARGET SCHEDULE // {post['target_date']} @ {post.get('target_time_display', '05:30 PM')} IST
     </div>
     """, unsafe_allow_html=True)
     
@@ -699,6 +735,38 @@ if "active_post" in st.session_state:
     
     st.text_area("Caption (Ready for Meta Business Suite)", concept["post_caption"], height=160)
     
+    # 1-Tap Clipboard Copy Component
+    escaped_caption = json.dumps(concept["post_caption"])
+    components.html(f"""
+    <div style="font-family: 'JetBrains Mono', monospace; margin: 4px 0 10px 0;">
+        <button id="copyBtn" onclick="copyCaption()" style="width: 100%; height: 2.8rem; background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; letter-spacing: 0.04em; transition: all 0.2s;">
+            📋 COPY CAPTION TO CLIPBOARD
+        </button>
+        <div id="copyToast" style="display: none; text-align: center; color: #34D399; font-size: 12px; margin-top: 6px; font-weight: bold;">
+            ✓ CAPTION COPIED TO CLIPBOARD
+        </div>
+    </div>
+    <script>
+        function copyCaption() {{
+            var text = {escaped_caption};
+            navigator.clipboard.writeText(text).then(function() {{
+                var btn = document.getElementById("copyBtn");
+                var toast = document.getElementById("copyToast");
+                btn.style.background = "rgba(16, 185, 129, 0.2)";
+                btn.style.color = "#34D399";
+                btn.style.borderColor = "#10B981";
+                toast.style.display = "block";
+                setTimeout(function() {{
+                    btn.style.background = "rgba(56, 189, 248, 0.15)";
+                    btn.style.color = "#38BDF8";
+                    btn.style.borderColor = "rgba(56, 189, 248, 0.4)";
+                    toast.style.display = "none";
+                }}, 2500);
+            }});
+        }}
+    </script>
+    """, height=65)
+    
     col_a, col_b = st.columns(2)
     with col_a:
         if st.button("✅ Lock & Advance Date"):
@@ -709,7 +777,7 @@ if "active_post" in st.session_state:
             })
             db["last_scheduled_date"] = post["target_date"]
             save_db(db)
-            st.success(f"Scheduled for {post['target_date']} at 5:30 PM IST!")
+            st.success(f"Scheduled for {post['target_date']}! Next date queued.")
             st.rerun()
             
     with col_b:
