@@ -92,7 +92,6 @@ def get_font(name, size):
             return ImageFont.truetype(path, size)
         except Exception:
             pass
-    # Pillow 10+ scaled default fallback
     try:
         return ImageFont.load_default(size=size)
     except Exception:
@@ -170,7 +169,6 @@ def render_post_canvas(bg_img, post_data):
     w, h = 1080, 1350
     canvas = bg_img.convert("RGBA")
     
-    # Smooth Scrim with balanced backdrop visibility
     scrim = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     s_draw = ImageDraw.Draw(scrim)
     for y in range(h):
@@ -181,14 +179,12 @@ def render_post_canvas(bg_img, post_data):
     
     draw = ImageDraw.Draw(canvas)
     
-    # Category Pill
     cat_f = get_font("Cinzel_Bold", 26)
     cat_t = f"—  {post_data['category'].upper()}  —"
     cw = draw.textlength(cat_t, font=cat_f)
     draw.text(((w - cw) // 2 + 1, 271), cat_t, font=cat_f, fill=(0, 0, 0, 220))
     draw.text(((w - cw) // 2, 270), cat_t, font=cat_f, fill=(218, 175, 55, 255))
     
-    # Headline
     hl_f = get_font("Cinzel_Bold", 88)
     hl_lines = wrap_text(draw, post_data['headline'].upper(), hl_f, 860)
     line_h = int(88 * 1.28)
@@ -204,11 +200,9 @@ def render_post_canvas(bg_img, post_data):
         draw.text((lx + 2, ly + 4), line, font=hl_f, fill=(0, 0, 0, 240))
         draw.text((lx, ly), line, font=hl_f, fill=(255, 253, 242, 255))
         
-    # Champagne Divider
     div_y = start_y + total_hl_h + 35
     draw.line([(w // 2 - 80, div_y), (w // 2 + 80, div_y)], fill=(218, 175, 55, 210), width=2)
     
-    # Body Insight
     body_f = get_font("Cormorant_Italic", 42)
     body_lines = wrap_text(draw, f'"{post_data["body_text"].strip()}"', body_f, 840)
     by = div_y + 40
@@ -220,7 +214,6 @@ def render_post_canvas(bg_img, post_data):
         draw.text((bx, by), bl, font=body_f, fill=(240, 244, 250, 255))
         by += int(42 * 1.36)
         
-    # Attribution
     att_f = get_font("Cinzel_Bold", 24)
     att_t = f"—  {post_data['attribution'].upper()}  —"
     aw = draw.textlength(att_t, font=att_f)
@@ -230,7 +223,7 @@ def render_post_canvas(bg_img, post_data):
     return canvas.convert("RGB")
 
 # ---------------------------------------------------------
-# 7. AI SYNTHESIS PIPELINE
+# 7. AI SYNTHESIS (DYNAMIC MODEL DISCOVERY)
 # ---------------------------------------------------------
 def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_directive):
     clean_key = raw_api_key.strip().strip('"').strip("'")
@@ -257,9 +250,21 @@ def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_direct
     }}
     """
 
-    candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-    last_err = None
-    
+    # Dynamically discover models supported by the provided API key
+    candidate_models = []
+    try:
+        for m in client.models.list():
+            name = m.name.replace("models/", "")
+            # Select generative text models
+            if any(k in name.lower() for k in ["flash", "pro"]) and not any(k in name.lower() for k in ["embed", "vision", "imagen"]):
+                candidate_models.append(name)
+    except Exception as e:
+        return None, f"Could not authenticate or list models: {e}"
+
+    if not candidate_models:
+        candidate_models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"]
+
+    errors = []
     for mod in candidate_models:
         try:
             resp = client.models.generate_content(
@@ -271,10 +276,10 @@ def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_direct
             if "headline" in parsed and "body_text" in parsed:
                 return parsed, None
         except Exception as e:
-            last_err = e
+            errors.append(f"{mod}: {e}")
             continue
             
-    return None, str(last_err)
+    return None, " | ".join(errors[:2])
 
 # ---------------------------------------------------------
 # 8. STREAMLIT UI: CONTROLS & STUDIO
@@ -282,7 +287,6 @@ def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_direct
 st.title("🏛️ Echoes Studio")
 st.caption("Automated Mobile Production Engine")
 
-# Robust API Key Resolution
 api_key = ""
 if "GEMINI_API_KEY" in st.secrets:
     api_key = str(st.secrets["GEMINI_API_KEY"]).strip().strip('"').strip("'")
@@ -323,7 +327,7 @@ with st.expander("⚙️ Creative Controls & Voice Input", expanded=True):
             var status = document.getElementById("micStatus");
             var btn = document.getElementById("micBtn");
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                status.innerText = "Speech API not supported in browser. Use keyboard mic.";
+                status.innerText = "Speech API not supported in browser. Use mobile keyboard mic.";
                 return;
             }
             var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -371,11 +375,11 @@ if generate_btn:
     if not api_key:
         st.error("Please provide a valid Gemini API Key above.")
     else:
-        with st.spinner("Synthesizing concept & rendering 4K canvas..."):
+        with st.spinner("Discovering active models, synthesizing concept & rendering 4K canvas..."):
             concept, err = generate_stoic_concept(api_key, selected_theme, selected_philosopher, custom_input)
             
             if err or not concept:
-                st.error(f"⚠️ API Error: {err}. Please check your API key in the 'API Key Status' box above.")
+                st.error(f"⚠️ API Error: {err}")
             else:
                 vault_items = THEMATIC_PHOTO_VAULT.get(selected_theme, THEMATIC_PHOTO_VAULT["SEA_CLIFF"])
                 b_list = db.get("blacklisted_backdrops", [])
