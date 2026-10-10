@@ -3,17 +3,17 @@ import io
 import json
 import re
 import random
-import urllib.request
 from datetime import datetime, timedelta, timezone
+import requests
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 import streamlit.components.v1 as components
 from google import genai
 from google.genai import types
 
 # ---------------------------------------------------------
-# 1. PAGE SETUP (MOBILE-FIRST VIEWPORT)
+# 1. PAGE SETUP (MOBILE VIEWPORT)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Echoes Studio Mobile",
@@ -22,7 +22,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom mobile styling
 st.markdown("""
 <style>
     .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
@@ -33,7 +32,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. PERSISTENCE & DIRECTORY CONFIG
+# 2. PERSISTENCE CONFIG
 # ---------------------------------------------------------
 DATA_DIR = os.path.join(os.getcwd(), "data")
 FONTS_DIR = os.path.join(os.getcwd(), "fonts")
@@ -63,23 +62,24 @@ def save_db(data):
 db = load_db()
 
 # ---------------------------------------------------------
-# 3. FONT MANAGEMENT (AUTO-DOWNLOAD GOOGLE FONTS)
+# 3. RELIABLE CDN FONT FOUNDRY (JSDELIVR CDN)
 # ---------------------------------------------------------
-FONT_URLS = {
-    "Cinzel_Bold": "https://github.com/google/fonts/raw/main/ofl/cinzel/static/Cinzel-Bold.ttf",
-    "Cinzel_Reg": "https://github.com/google/fonts/raw/main/ofl/cinzel/static/Cinzel-Regular.ttf",
-    "Cormorant_Italic": "https://github.com/google/fonts/raw/main/ofl/cormorantgaramond/static/CormorantGaramond-Italic.ttf"
+CDN_FONTS = {
+    "Cinzel_Bold": "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/cinzel/static/Cinzel-Bold.ttf",
+    "Cinzel_Reg": "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/cinzel/static/Cinzel-Regular.ttf",
+    "Cormorant_Italic": "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/cormorantgaramond/static/CormorantGaramond-Italic.ttf"
 }
 
 def ensure_fonts():
     headers = {"User-Agent": "Mozilla/5.0"}
-    for name, url in FONT_URLS.items():
+    for name, url in CDN_FONTS.items():
         path = os.path.join(FONTS_DIR, f"{name}.ttf")
-        if not os.path.exists(path) or os.path.getsize(path) < 1000:
+        if not os.path.exists(path) or os.path.getsize(path) < 5000:
             try:
-                req = urllib.request.Request(url, headers=headers)
-                with urllib.request.urlopen(req, timeout=10) as resp, open(path, "wb") as f:
-                    f.write(resp.read())
+                res = requests.get(url, headers=headers, timeout=12)
+                if res.status_code == 200 and len(res.content) > 5000:
+                    with open(path, "wb") as f:
+                        f.write(res.content)
             except Exception:
                 pass
 
@@ -87,12 +87,16 @@ ensure_fonts()
 
 def get_font(name, size):
     path = os.path.join(FONTS_DIR, f"{name}.ttf")
-    if os.path.exists(path):
+    if os.path.exists(path) and os.path.getsize(path) > 5000:
         try:
             return ImageFont.truetype(path, size)
         except Exception:
             pass
-    return ImageFont.load_default()
+    # Pillow 10+ scaled default fallback
+    try:
+        return ImageFont.load_default(size=size)
+    except Exception:
+        return ImageFont.load_default()
 
 # ---------------------------------------------------------
 # 4. CURATED 4K THEMATIC VISUAL VAULT
@@ -123,12 +127,11 @@ THEMATIC_PHOTO_VAULT = {
 }
 
 # ---------------------------------------------------------
-# 5. SMART NEXT-SLOT CALCULATOR (IST CADENCE)
+# 5. SMART NEXT-SLOT CALCULATOR
 # ---------------------------------------------------------
 def get_next_recommended_slot():
     now_ist = datetime.now(timezone(timedelta(hours=5, minutes=30)))
     last_date_str = db.get("last_scheduled_date")
-    
     if last_date_str:
         try:
             last_date = datetime.strptime(last_date_str, "%Y-%m-%d").date()
@@ -137,11 +140,10 @@ def get_next_recommended_slot():
             candidate = now_ist.date() + timedelta(days=1)
     else:
         candidate = now_ist.date() if now_ist.hour < 16 else (now_ist.date() + timedelta(days=1))
-        
     return candidate
 
 # ---------------------------------------------------------
-# 6. GRAPHICS COMPOSITOR (FULL-BLEED CINEMATIC)
+# 6. GRAPHICS COMPOSITOR
 # ---------------------------------------------------------
 def wrap_text(draw, text, font, max_width):
     lines = []
@@ -160,22 +162,21 @@ def wrap_text(draw, text, font, max_width):
     return lines
 
 def fetch_image(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=15) as res:
-        raw = Image.open(io.BytesIO(res.read()))
-        return raw.resize((1080, 1350), Image.Resampling.LANCZOS)
+    res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+    raw = Image.open(io.BytesIO(res.content))
+    return raw.resize((1080, 1350), Image.Resampling.LANCZOS)
 
 def render_post_canvas(bg_img, post_data):
     w, h = 1080, 1350
     canvas = bg_img.convert("RGBA")
     
-    # Seamless Vignette
+    # Smooth Scrim with balanced backdrop visibility
     scrim = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     s_draw = ImageDraw.Draw(scrim)
     for y in range(h):
         dist = abs(y - h * 0.52) / (h * 0.52)
-        alpha = int(70 + 130 * (1.0 - dist ** 1.8))
-        s_draw.line([(0, y), (w, y)], fill=(6, 8, 12, min(220, max(40, alpha))))
+        alpha = int(45 + 115 * (1.0 - dist ** 1.8))
+        s_draw.line([(0, y), (w, y)], fill=(6, 8, 12, min(190, max(25, alpha))))
     canvas = Image.alpha_composite(canvas, scrim)
     
     draw = ImageDraw.Draw(canvas)
@@ -229,7 +230,7 @@ def render_post_canvas(bg_img, post_data):
     return canvas.convert("RGB")
 
 # ---------------------------------------------------------
-# 7. AI SYNTHESIS PIPELINE (MULTI-MODEL RESILIENT FALLBACK)
+# 7. AI SYNTHESIS PIPELINE
 # ---------------------------------------------------------
 def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_directive):
     clean_key = raw_api_key.strip().strip('"').strip("'")
@@ -241,7 +242,7 @@ def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_direct
     Role: Creative Director for 'Echoes of Wisdom'.
     Theme: {visual_theme}
     Preferred Philosopher: {philosopher}
-    User Direction/Voice Input: {custom_directive or 'Synthesize an authoritative, timeless Stoic lesson.'}
+    User Direction/Voice Input: {custom_directive or 'Synthesize an authoritative, novel Stoic lesson.'}
     
     STRICT BLACKLIST (DO NOT USE OR REPHRASE):
     {blacklist_str}
@@ -256,7 +257,8 @@ def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_direct
     }}
     """
 
-    candidate_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash", "gemini-flash-latest"]
+    candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    last_err = None
     
     for mod in candidate_models:
         try:
@@ -267,18 +269,12 @@ def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_direct
             )
             parsed = json.loads(resp.text)
             if "headline" in parsed and "body_text" in parsed:
-                return parsed
-        except Exception:
+                return parsed, None
+        except Exception as e:
+            last_err = e
             continue
             
-    # Zero-crash fallback
-    return {
-        "category": "INNER CITADEL",
-        "headline": "STAND UNMOVED",
-        "body_text": "External turbulence has no power over the mind that chooses stillness above reaction.",
-        "attribution": "MARCUS AURELIUS",
-        "post_caption": "🏛️ MASTER YOUR RESPONSE.\n\nWhen external disrespect strikes:\n1️⃣ Guard your peace in absolute silence\n2️⃣ Allow the noise into your day\n\nDrop 1 or 2 below. 👇\n\n#Stoicism #MarcusAurelius #Wisdom"
-    }
+    return None, str(last_err)
 
 # ---------------------------------------------------------
 # 8. STREAMLIT UI: CONTROLS & STUDIO
@@ -293,8 +289,10 @@ if "GEMINI_API_KEY" in st.secrets:
 elif os.getenv("GEMINI_API_KEY"):
     api_key = str(os.getenv("GEMINI_API_KEY")).strip().strip('"').strip("'")
 
-if not api_key:
-    api_key = st.text_input("Gemini API Key", type="password", placeholder="Enter your key...")
+with st.expander("🔑 API Key Status", expanded=(not bool(api_key))):
+    user_key_input = st.text_input("Enter or verify Gemini API Key", value=api_key, type="password")
+    if user_key_input:
+        api_key = user_key_input.strip().strip('"').strip("'")
 
 rec_slot = get_next_recommended_slot()
 st.info(f"📅 **Next Recommended Publishing Window:**\n\n**{rec_slot.strftime('%A, %b %d, %Y')} at 05:30 PM IST** (Spaced away from evening Reels).")
@@ -312,7 +310,6 @@ with st.expander("⚙️ Creative Controls & Voice Input", expanded=True):
             ["Any", "Marcus Aurelius", "Seneca", "Epictetus"]
         )
 
-    # HTML5 Speech-to-Text mic component
     components.html("""
     <div style="font-family: sans-serif; margin-bottom: 8px;">
         <button id="micBtn" onclick="toggleSpeech()" style="background-color: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">
@@ -326,7 +323,7 @@ with st.expander("⚙️ Creative Controls & Voice Input", expanded=True):
             var status = document.getElementById("micStatus");
             var btn = document.getElementById("micBtn");
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                status.innerText = "Speech API not supported in this browser. Use mobile keyboard mic.";
+                status.innerText = "Speech API not supported in browser. Use keyboard mic.";
                 return;
             }
             var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -372,27 +369,30 @@ generate_btn = st.button("🚀 Generate New Master Post", type="primary")
 # ---------------------------------------------------------
 if generate_btn:
     if not api_key:
-        st.error("Please provide a Gemini API Key to continue.")
+        st.error("Please provide a valid Gemini API Key above.")
     else:
         with st.spinner("Synthesizing concept & rendering 4K canvas..."):
-            concept = generate_stoic_concept(api_key, selected_theme, selected_philosopher, custom_input)
+            concept, err = generate_stoic_concept(api_key, selected_theme, selected_philosopher, custom_input)
             
-            vault_items = THEMATIC_PHOTO_VAULT.get(selected_theme, THEMATIC_PHOTO_VAULT["SEA_CLIFF"])
-            b_list = db.get("blacklisted_backdrops", [])
-            available = [it for it in vault_items if it["name"] not in b_list]
-            if not available:
-                available = vault_items
-            chosen_item = random.choice(available)
-            
-            bg_image = fetch_image(chosen_item["url"])
-            canvas_result = render_post_canvas(bg_image, concept)
-            
-            st.session_state["active_post"] = {
-                "concept": concept,
-                "canvas": canvas_result,
-                "backdrop_name": chosen_item["name"],
-                "target_date": rec_slot.strftime("%Y-%m-%d")
-            }
+            if err or not concept:
+                st.error(f"⚠️ API Error: {err}. Please check your API key in the 'API Key Status' box above.")
+            else:
+                vault_items = THEMATIC_PHOTO_VAULT.get(selected_theme, THEMATIC_PHOTO_VAULT["SEA_CLIFF"])
+                b_list = db.get("blacklisted_backdrops", [])
+                available = [it for it in vault_items if it["name"] not in b_list]
+                if not available:
+                    available = vault_items
+                chosen_item = random.choice(available)
+                
+                bg_image = fetch_image(chosen_item["url"])
+                canvas_result = render_post_canvas(bg_image, concept)
+                
+                st.session_state["active_post"] = {
+                    "concept": concept,
+                    "canvas": canvas_result,
+                    "backdrop_name": chosen_item["name"],
+                    "target_date": rec_slot.strftime("%Y-%m-%d")
+                }
 
 # ---------------------------------------------------------
 # 10. POST-GENERATION REVIEW & ACTIONS
