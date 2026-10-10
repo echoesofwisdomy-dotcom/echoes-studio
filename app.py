@@ -269,7 +269,20 @@ def get_font(name, size):
         return ImageFont.load_default()
 
 # ---------------------------------------------------------
-# 4. CURATED 50 HIGH-ENGAGEMENT VISUAL VAULT
+# 4. UNICODE MATHEMATICAL BOLD ENGINE (FOR FACEBOOK FEEDS)
+# ---------------------------------------------------------
+def to_unicode_bold(text):
+    """
+    Translates standard ASCII text into true Mathematical Sans-Serif Bold Unicode.
+    Displays as real bold on Facebook and Instagram without asterisks.
+    """
+    normal_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    bold_chars   = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵"
+    trans = str.maketrans(normal_chars, bold_chars)
+    return text.translate(trans)
+
+# ---------------------------------------------------------
+# 5. CURATED 50 HIGH-ENGAGEMENT VISUAL VAULT
 # ---------------------------------------------------------
 EXPANDED_VAULT = {
     "CLASSICAL_STATUE": [
@@ -338,7 +351,7 @@ EXPANDED_VAULT = {
 }
 
 # ---------------------------------------------------------
-# 5. DYNAMIC CADENCE & MEMORY ENGINE (24-HOUR FORMAT)
+# 6. DYNAMIC CADENCE ENGINE (24-HOUR MILITARY FORMAT)
 # ---------------------------------------------------------
 def parse_time_str(t_str):
     try:
@@ -370,7 +383,7 @@ def calculate_next_slot(base_date=None, target_time_str="17:30"):
     return datetime.combine(next_d, sched_t)
 
 # ---------------------------------------------------------
-# 6. FAIL-SAFE GRAPHICS & IMAGE COMPOSITOR
+# 7. FAIL-SAFE GRAPHICS & COMPOSITOR
 # ---------------------------------------------------------
 def wrap_text(draw, text, font, max_width):
     lines = []
@@ -541,7 +554,37 @@ def render_post_canvas(bg_img, post_data):
     return canvas.convert("RGB")
 
 # ---------------------------------------------------------
-# 7. ZERO-DUPLICATION AI SYNTHESIS (GEMINI 3.8 FLASH ACTIVE)
+# 8. HIGH-CONVERSION CAPTION FORMATTER
+# ---------------------------------------------------------
+def format_high_conversion_caption(raw_hook, lesson, quote, attribution, deb_q, choice1, choice2, tags):
+    """
+    Builds a structured caption with Unicode Bold on the primary hook
+    to maximize click-through before Facebook's '...see more' cutoff.
+    """
+    clean_hook = re.sub(r'[^\w\s]', '', raw_hook).strip().upper()
+    bold_hook = to_unicode_bold(clean_hook)
+    
+    caption_lines = [
+        f"⚡ {bold_hook} 🏛️",
+        "",
+        lesson.strip(),
+        "",
+        f'"{quote.strip()}" — {attribution.strip()}',
+        "",
+        f"🤔 {deb_q.strip()}",
+        f"1️⃣ {choice1.strip()}",
+        f"2️⃣ {choice2.strip()}",
+        "",
+        "Drop 1 or 2 below. 👇",
+        "",
+        f"• Follow @EchoesOfWisdom for timeless clarity.",
+        "",
+        f"{tags.strip()}"
+    ]
+    return "\n".join(caption_lines)
+
+# ---------------------------------------------------------
+# 9. ZERO-DUPLICATION AI SYNTHESIS (GEMINI 3.8 FLASH)
 # ---------------------------------------------------------
 PHILOSOPHERS_POOL = [
     "Marcus Aurelius", "Seneca", "Epictetus", "Friedrich Nietzsche", 
@@ -552,7 +595,6 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
     clean_key = raw_api_key.strip().strip('"').strip("'")
     client = genai.Client(api_key=clean_key)
     
-    # 1. Collect all previously used headlines across channel history
     used = set(db.get("used_headlines", []))
     for p in db.get("scheduled_posts", []):
         if p.get("headline"):
@@ -561,7 +603,6 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
     recent_blacklist = list(used)[-60:]
     blacklist_str = "\n".join([f"- {h}" for h in recent_blacklist]) if recent_blacklist else "None yet."
 
-    # 2. Rotate philosophers if random choice
     target_philosopher = philosopher
     if philosopher in ["🎲 Random / AI Choice", "Any"]:
         last_phil = db.get("last_philosopher")
@@ -569,27 +610,37 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
         target_philosopher = random.choice(available_phils)
 
     prompt = f"""
-    You are the Senior Creative Director for 'Echoes of Wisdom'.
+    You are the Head Copywriter for 'Echoes of Wisdom'.
     Theme: {visual_theme}
     Featured Thinker: {target_philosopher}
     User Direction/Focus: {custom_directive or 'Synthesize an original, profound, and impactful lesson on mental clarity and unshakeable discipline.'}
 
     CRITICAL ANTI-DUPLICATION RULE:
-    The following headlines have ALREADY BEEN PUBLISHED. You are STRICTLY FORBIDDEN from generating any of these or close variations:
+    The following headlines have ALREADY BEEN PUBLISHED. You are STRICTLY FORBIDDEN from repeating them:
     {blacklist_str}
 
     Requirements:
-    1. The headline must be 2 to 4 bold, commanding words (e.g., RULE YOUR DESIRE, SUFFER NOT TWICE, EMBRACE THE GAUNTLET).
-    2. The body quote must be 12 to 18 words explaining the hook with maximum emotional and philosophical weight.
-    3. The caption must include a compelling hook, the deep lesson, a debate question with 1️⃣/2️⃣ choices, and hashtags.
+    1. headline: 2 to 4 bold commanding words for the image canvas (e.g. RULE YOUR SOLITUDE, TAMING THE MIND).
+    2. body_text: 12 to 18 words on the canvas explaining the hook.
+    3. caption_hook: 4 to 7 explosive words designed to stop the mobile scroll (e.g. MOST MEN NEVER CONQUER SILENCE).
+    4. caption_lesson: 2 crisp sentences explaining the psychological truth of this quote.
+    5. debate_question: 1 compelling question framing an internal dilemma.
+    6. choice_1: The Stoic master reaction.
+    7. choice_2: The impulsive reaction.
+    8. hashtags: 5 curated hashtags (#Stoicism #Philosophy #Discipline #EchoesOfWisdom #MarcusAurelius).
 
     Output STRICT JSON ONLY:
     {{
-      "category": "CONCISE PILLAR (e.g. INNER CITADEL, EMOTIONAL MASTERY, DEEP FOCUS, FORTITUDE, QUIET PRIDE)",
-      "headline": "FRESH UNIQUE 2-4 WORD HOOK",
+      "category": "CONCISE PILLAR (e.g. INNER CITADEL, EMOTIONAL MASTERY, DEEP FOCUS, FORTITUDE)",
+      "headline": "BOLD 2-4 WORD HOOK",
       "body_text": "One powerful 12-18 word sentence explaining the hook.",
       "attribution": "{target_philosopher.upper()}",
-      "post_caption": "Full Facebook/Instagram caption with hook, lesson, binary debate CTA (1️⃣/2️⃣), handles, and hashtags."
+      "caption_hook": "PUNCHY 4-7 WORD SCROLL STOPPER",
+      "caption_lesson": "Two sentences of high-value wisdom.",
+      "debate_question": "Which path do you choose?",
+      "choice_1": "Master option",
+      "choice_2": "Impulsive option",
+      "hashtags": "#Stoicism #Philosophy #MarcusAurelius #Wisdom #Discipline"
     }}
     """
 
@@ -610,6 +661,19 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
             if "headline" in parsed and "body_text" in parsed:
                 if parsed["headline"].upper() not in used:
                     db["last_philosopher"] = target_philosopher
+                    
+                    # Assemble the high-conversion Unicode bold caption
+                    full_caption = format_high_conversion_caption(
+                        raw_hook=parsed.get("caption_hook", parsed["headline"]),
+                        lesson=parsed.get("caption_lesson", parsed["body_text"]),
+                        quote=parsed["body_text"],
+                        attribution=parsed["attribution"],
+                        deb_q=parsed.get("debate_question", "When chaos strikes your day:"),
+                        choice1=parsed.get("choice_1", "Stand firm in stillness"),
+                        choice2=parsed.get("choice_2", "React and lose control"),
+                        tags=parsed.get("hashtags", "#Stoicism #Wisdom #InnerStrength")
+                    )
+                    parsed["post_caption"] = full_caption
                     return parsed, None
         except Exception as e:
             errs.append(f"{mod}: {e}")
@@ -618,12 +682,12 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
     return None, " | ".join(errs)
 
 # ---------------------------------------------------------
-# 8. OBSIDIAN DASHBOARD UI
+# 10. OBSIDIAN DASHBOARD UI
 # ---------------------------------------------------------
 st.markdown("""
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
     <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC;">
-        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v3.0 // GEMINI 3.8</span>
+        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v3.1 // VIRAL COPY</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -780,7 +844,7 @@ with st.expander("🎛️ STUDIO CONTROLS & DIRECTIVES", expanded=True):
 generate_btn = st.button("🚀 Render Master Social Post", type="primary")
 
 # ---------------------------------------------------------
-# 9. EXECUTION PIPELINE (ROUND-ROBIN IMAGE ROTATION)
+# 11. EXECUTION PIPELINE
 # ---------------------------------------------------------
 if generate_btn:
     if not api_key:
@@ -798,7 +862,7 @@ if generate_btn:
             else:
                 vault_items = EXPANDED_VAULT.get(theme_choice, EXPANDED_VAULT["CLASSICAL_STATUE"])
                 
-                # Round-robin backdrop selection: Never repeat until pool exhausted
+                # Round-robin backdrop selection
                 used_bd = set(db.get("used_backdrops", []))
                 fresh_backdrops = [it for it in vault_items if it["name"] not in used_bd]
                 
@@ -820,7 +884,7 @@ if generate_btn:
                 }
 
 # ---------------------------------------------------------
-# 10. ACTIVE ASSET TERMINAL & 1-TAP INLINE CLIPBOARD
+# 12. ACTIVE ASSET TERMINAL & 1-TAP INLINE CLIPBOARD
 # ---------------------------------------------------------
 if "active_post" in st.session_state:
     post = st.session_state["active_post"]
@@ -848,9 +912,9 @@ if "active_post" in st.session_state:
         mime="image/png"
     )
     
-    st.text_area("Caption (Ready for Meta Business Suite)", concept["post_caption"], height=160)
+    st.text_area("Caption (Ready for Meta Business Suite)", concept["post_caption"], height=200)
     
-    # Direct In-Button Copy
+    # 1-Tap Copy Deck
     escaped_caption = json.dumps(concept["post_caption"])
     components.html(f"""
     <div style="margin: 0; padding: 0;">
@@ -945,7 +1009,7 @@ if "active_post" in st.session_state:
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 11. AUDIT LOG & SCHEDULED QUEUE VIEWER
+# 13. AUDIT LOG & SCHEDULED QUEUE VIEWER
 # ---------------------------------------------------------
 if db.get("scheduled_posts"):
     with st.expander(f"📋 SCHEDULED QUEUE & LOGGED POSTS ({len(db['scheduled_posts'])})", expanded=False):
