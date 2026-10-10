@@ -62,22 +62,22 @@ def save_db(data):
 db = load_db()
 
 # ---------------------------------------------------------
-# 3. RELIABLE CDN FONT FOUNDRY (JSDELIVR CDN)
+# 3. DIRECT GSTATIC FONT ENGINE (NO JSDELIVR / GITHUB RATE LIMITS)
 # ---------------------------------------------------------
-CDN_FONTS = {
-    "Cinzel_Bold": "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/cinzel/static/Cinzel-Bold.ttf",
-    "Cinzel_Reg": "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/cinzel/static/Cinzel-Regular.ttf",
-    "Cormorant_Italic": "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/cormorantgaramond/static/CormorantGaramond-Italic.ttf"
+GSTATIC_FONTS = {
+    "Cinzel_Bold": "https://fonts.gstatic.com/s/cinzel/v23/8vIQ776mE3tYOmt9_ZUC.ttf",
+    "Cinzel_Reg": "https://fonts.gstatic.com/s/cinzel/v23/8vIQ776mE3tYOmt9_ZQ.ttf",
+    "Cormorant_Italic": "https://fonts.gstatic.com/s/cormorantgaramond/v19/co3bmX5slCNuHLi8bLeY9MK7whWMhyjYpHtK.ttf"
 }
 
 def ensure_fonts():
     headers = {"User-Agent": "Mozilla/5.0"}
-    for name, url in CDN_FONTS.items():
+    for name, url in GSTATIC_FONTS.items():
         path = os.path.join(FONTS_DIR, f"{name}.ttf")
-        if not os.path.exists(path) or os.path.getsize(path) < 5000:
+        if not os.path.exists(path) or os.path.getsize(path) < 10000:
             try:
                 res = requests.get(url, headers=headers, timeout=12)
-                if res.status_code == 200 and len(res.content) > 5000:
+                if res.status_code == 200 and len(res.content) > 10000:
                     with open(path, "wb") as f:
                         f.write(res.content)
             except Exception:
@@ -87,7 +87,7 @@ ensure_fonts()
 
 def get_font(name, size):
     path = os.path.join(FONTS_DIR, f"{name}.ttf")
-    if os.path.exists(path) and os.path.getsize(path) > 5000:
+    if os.path.exists(path) and os.path.getsize(path) > 10000:
         try:
             return ImageFont.truetype(path, size)
         except Exception:
@@ -142,7 +142,7 @@ def get_next_recommended_slot():
     return candidate
 
 # ---------------------------------------------------------
-# 6. GRAPHICS COMPOSITOR
+# 6. GRAPHICS COMPOSITOR (ZERO TOFU, ZERO FONT COLLAPSE)
 # ---------------------------------------------------------
 def wrap_text(draw, text, font, max_width):
     lines = []
@@ -165,10 +165,32 @@ def fetch_image(url):
     raw = Image.open(io.BytesIO(res.content))
     return raw.resize((1080, 1350), Image.Resampling.LANCZOS)
 
+def stamp_brand(canvas):
+    logo_file = "logo.png"
+    if os.path.exists(logo_file):
+        try:
+            l_img = Image.open(logo_file).convert("RGBA")
+            l_img.thumbnail((115, 115), Image.Resampling.LANCZOS)
+            lw, lh = l_img.size
+            canvas.paste(l_img, ((1080 - lw) // 2, 115), l_img)
+            return
+        except Exception:
+            pass
+    
+    # Elegant fallback emblem if logo.png is not yet present
+    draw = ImageDraw.Draw(canvas)
+    crest_f = get_font("Cinzel_Bold", 20)
+    crest_t = "E C H O E S   O F   W I S D O M"
+    cw = draw.textlength(crest_t, font=crest_f)
+    draw.text(((1080 - cw) // 2 + 1, 131), crest_t, font=crest_f, fill=(0, 0, 0, 220))
+    draw.text(((1080 - cw) // 2, 130), crest_t, font=crest_f, fill=(218, 175, 55, 230))
+    draw.line([(1080 // 2 - 40, 165), (1080 // 2 + 40, 165)], fill=(218, 175, 55, 180), width=1)
+
 def render_post_canvas(bg_img, post_data):
     w, h = 1080, 1350
     canvas = bg_img.convert("RGBA")
     
+    # Seamless Vignette
     scrim = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     s_draw = ImageDraw.Draw(scrim)
     for y in range(h):
@@ -177,14 +199,20 @@ def render_post_canvas(bg_img, post_data):
         s_draw.line([(0, y), (w, y)], fill=(6, 8, 12, min(190, max(25, alpha))))
     canvas = Image.alpha_composite(canvas, scrim)
     
+    # Stamp brand header
+    stamp_brand(canvas)
+    
     draw = ImageDraw.Draw(canvas)
     
+    # Category Pill using ASCII bullets (Zero box artifacts)
     cat_f = get_font("Cinzel_Bold", 26)
-    cat_t = f"—  {post_data['category'].upper()}  —"
+    clean_cat = post_data['category'].strip().upper()
+    cat_t = f"•   {clean_cat}   •"
     cw = draw.textlength(cat_t, font=cat_f)
     draw.text(((w - cw) // 2 + 1, 271), cat_t, font=cat_f, fill=(0, 0, 0, 220))
     draw.text(((w - cw) // 2, 270), cat_t, font=cat_f, fill=(218, 175, 55, 255))
     
+    # Headline in Cinzel Bold
     hl_f = get_font("Cinzel_Bold", 88)
     hl_lines = wrap_text(draw, post_data['headline'].upper(), hl_f, 860)
     line_h = int(88 * 1.28)
@@ -200,9 +228,11 @@ def render_post_canvas(bg_img, post_data):
         draw.text((lx + 2, ly + 4), line, font=hl_f, fill=(0, 0, 0, 240))
         draw.text((lx, ly), line, font=hl_f, fill=(255, 253, 242, 255))
         
+    # Champagne Divider
     div_y = start_y + total_hl_h + 35
     draw.line([(w // 2 - 80, div_y), (w // 2 + 80, div_y)], fill=(218, 175, 55, 210), width=2)
     
+    # Body Quote in Cormorant Garamond Italic
     body_f = get_font("Cormorant_Italic", 42)
     body_lines = wrap_text(draw, f'"{post_data["body_text"].strip()}"', body_f, 840)
     by = div_y + 40
@@ -214,8 +244,10 @@ def render_post_canvas(bg_img, post_data):
         draw.text((bx, by), bl, font=body_f, fill=(240, 244, 250, 255))
         by += int(42 * 1.36)
         
+    # Attribution using ASCII bullets
     att_f = get_font("Cinzel_Bold", 24)
-    att_t = f"—  {post_data['attribution'].upper()}  —"
+    clean_att = post_data['attribution'].strip().upper()
+    att_t = f"•   {clean_att}   •"
     aw = draw.textlength(att_t, font=att_f)
     draw.text(((w - aw) // 2 + 1, by + 26), att_t, font=att_f, fill=(0, 0, 0, 220))
     draw.text(((w - aw) // 2, by + 25), att_t, font=att_f, fill=(218, 175, 55, 255))
@@ -223,7 +255,7 @@ def render_post_canvas(bg_img, post_data):
     return canvas.convert("RGB")
 
 # ---------------------------------------------------------
-# 7. AI SYNTHESIS (DYNAMIC MODEL DISCOVERY)
+# 7. AI SYNTHESIS PIPELINE
 # ---------------------------------------------------------
 def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_directive):
     clean_key = raw_api_key.strip().strip('"').strip("'")
@@ -250,16 +282,14 @@ def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_direct
     }}
     """
 
-    # Dynamically discover models supported by the provided API key
     candidate_models = []
     try:
         for m in client.models.list():
             name = m.name.replace("models/", "")
-            # Select generative text models
             if any(k in name.lower() for k in ["flash", "pro"]) and not any(k in name.lower() for k in ["embed", "vision", "imagen"]):
                 candidate_models.append(name)
     except Exception as e:
-        return None, f"Could not authenticate or list models: {e}"
+        return None, f"Auth Error: {e}"
 
     if not candidate_models:
         candidate_models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"]
@@ -327,7 +357,7 @@ with st.expander("⚙️ Creative Controls & Voice Input", expanded=True):
             var status = document.getElementById("micStatus");
             var btn = document.getElementById("micBtn");
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                status.innerText = "Speech API not supported in browser. Use mobile keyboard mic.";
+                status.innerText = "Speech API not supported in browser. Use keyboard mic.";
                 return;
             }
             var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -375,7 +405,7 @@ if generate_btn:
     if not api_key:
         st.error("Please provide a valid Gemini API Key above.")
     else:
-        with st.spinner("Discovering active models, synthesizing concept & rendering 4K canvas..."):
+        with st.spinner("Synthesizing concept & rendering 4K canvas..."):
             concept, err = generate_stoic_concept(api_key, selected_theme, selected_philosopher, custom_input)
             
             if err or not concept:
