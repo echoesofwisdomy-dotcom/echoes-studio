@@ -269,7 +269,7 @@ def get_font(name, size):
         return ImageFont.load_default()
 
 # ---------------------------------------------------------
-# 4. 50 CURATED HIGH-ENGAGEMENT VISUAL VAULT
+# 4. CURATED 50 HIGH-ENGAGEMENT VISUAL VAULT
 # ---------------------------------------------------------
 EXPANDED_VAULT = {
     "CLASSICAL_STATUE": [
@@ -541,7 +541,7 @@ def render_post_canvas(bg_img, post_data):
     return canvas.convert("RGB")
 
 # ---------------------------------------------------------
-# 7. ZERO-DUPLICATION AI SYNTHESIS PIPELINE
+# 7. ZERO-DUPLICATION AI SYNTHESIS (GEMINI 3.8 FLASH ACTIVE)
 # ---------------------------------------------------------
 PHILOSOPHERS_POOL = [
     "Marcus Aurelius", "Seneca", "Epictetus", "Friedrich Nietzsche", 
@@ -552,7 +552,7 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
     clean_key = raw_api_key.strip().strip('"').strip("'")
     client = genai.Client(api_key=clean_key)
     
-    # 1. Collect all previously used headlines across lifetime of channel
+    # 1. Collect all previously used headlines across channel history
     used = set(db.get("used_headlines", []))
     for p in db.get("scheduled_posts", []):
         if p.get("headline"):
@@ -561,7 +561,7 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
     recent_blacklist = list(used)[-60:]
     blacklist_str = "\n".join([f"- {h}" for h in recent_blacklist]) if recent_blacklist else "None yet."
 
-    # 2. Rotate philosophers if random is selected
+    # 2. Rotate philosophers if random choice
     target_philosopher = philosopher
     if philosopher in ["🎲 Random / AI Choice", "Any"]:
         last_phil = db.get("last_philosopher")
@@ -593,8 +593,10 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
     }}
     """
 
+    candidate_models = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"]
     errs = []
-    for mod in ["gemini-2.5-flash", "gemini-2.0-flash"]:
+    
+    for mod in candidate_models:
         try:
             resp = client.models.generate_content(
                 model=mod,
@@ -606,7 +608,6 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
             )
             parsed = json.loads(resp.text)
             if "headline" in parsed and "body_text" in parsed:
-                # Double-check that it is not in the blacklist
                 if parsed["headline"].upper() not in used:
                     db["last_philosopher"] = target_philosopher
                     return parsed, None
@@ -622,7 +623,7 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
 st.markdown("""
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
     <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC;">
-        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v2.9 // ZERO-DUPE ENGINE</span>
+        ⚡ ECHOES STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500;">v3.0 // GEMINI 3.8</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -644,7 +645,7 @@ formatted_time_24h = next_target_dt.strftime("%H:%M")
 st.markdown(f"""
 <div class="telemetry-bar">
     <div class="badge badge-green"><span class="dot"></span> ENGINE: READY</div>
-    <div class="badge badge-blue">⚡ ZERO-DUPLICATION ACTIVE</div>
+    <div class="badge badge-blue">⚡ GEMINI 3.8 FLASH</div>
     <div class="badge badge-amber">📅 NEXT DROP: {next_target_dt.strftime('%a, %b %d')} @ {formatted_time_24h} IST</div>
 </div>
 """, unsafe_allow_html=True)
@@ -785,7 +786,7 @@ if generate_btn:
     if not api_key:
         st.error("Missing Gemini API Key. Open the '🔑 API CREDENTIALS' panel above.")
     else:
-        with st.spinner("⚡ Synthesizing unique concept & checking against history..."):
+        with st.spinner("⚡ Synthesizing unique concept with Gemini 3.8 Flash..."):
             theme_choice = selected_theme
             if theme_choice.startswith("🎲"):
                 theme_choice = random.choice(list(EXPANDED_VAULT.keys()))
@@ -802,7 +803,6 @@ if generate_btn:
                 fresh_backdrops = [it for it in vault_items if it["name"] not in used_bd]
                 
                 if not fresh_backdrops:
-                    # Reset pool for this theme once all have been cycled
                     db["used_backdrops"] = [b for b in db.get("used_backdrops", []) if b not in [it["name"] for it in vault_items]]
                     fresh_backdrops = vault_items
 
@@ -904,7 +904,6 @@ if "active_post" in st.session_state:
     col_a, col_b = st.columns(2)
     with col_a:
         if st.button("✅ Lock & Advance Date"):
-            # Record post and log to deduplication ledger
             db["scheduled_posts"].append({
                 "date": post["target_date"],
                 "time": post.get("target_time_display", "17:30"),
