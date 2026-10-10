@@ -195,7 +195,7 @@ def get_next_recommended_slot():
     return candidate
 
 # ---------------------------------------------------------
-# 6. GRAPHICS COMPOSITOR (LOGO STAMP + CLEAN TYPOGRAPHY)
+# 6. GRAPHICS COMPOSITOR (LOGO STAMP + VECTOR WINGS)
 # ---------------------------------------------------------
 def wrap_text(draw, text, font, max_width):
     lines = []
@@ -219,24 +219,52 @@ def fetch_image(url):
     return raw.resize((1080, 1350), Image.Resampling.LANCZOS)
 
 def stamp_brand(canvas):
-    logo_file = "logo.png"
-    if os.path.exists(logo_file):
+    logo_file = None
+    for name in ["logo.png", "logo.jpg", "logo.jpeg"]:
+        if os.path.exists(name):
+            logo_file = name
+            break
+
+    if logo_file:
         try:
-            l_img = Image.open(logo_file).convert("RGBA")
-            l_img.thumbnail((120, 120), Image.Resampling.LANCZOS)
-            lw, lh = l_img.size
-            lx = (1080 - lw) // 2
-            ly = 110
-            # Soft protective glow shadow
+            raw_logo = Image.open(logo_file).convert("RGBA")
+            lw_orig, lh_orig = raw_logo.size
+            min_dim = min(lw_orig, lh_orig)
+            
+            # Center crop to square
+            left = (lw_orig - min_dim) // 2
+            top = (lh_orig - min_dim) // 2
+            raw_logo = raw_logo.crop((left, top, left + min_dim, top + min_dim))
+            
+            # Antialiased circular mask
+            scale = 4
+            big_size = (min_dim * scale, min_dim * scale)
+            big_mask = Image.new("L", big_size, 0)
+            d_mask = ImageDraw.Draw(big_mask)
+            d_mask.ellipse([0, 0, big_size[0] - 1, big_size[1] - 1], fill=255)
+            circle_mask = big_mask.resize((min_dim, min_dim), Image.Resampling.LANCZOS)
+            raw_logo.putalpha(circle_mask)
+            
+            # Resize and stamp with drop shadow
+            target_size = 120
+            raw_logo.thumbnail((target_size, target_size), Image.Resampling.LANCZOS)
+            final_w, final_h = raw_logo.size
+            pos_x = (1080 - final_w) // 2
+            pos_y = 110
+            
             shadow = Image.new("RGBA", (1080, 1350), (0, 0, 0, 0))
-            shadow.paste((0, 0, 0, 230), (lx + 2, ly + 4), mask=l_img.split()[3].filter(ImageFilter.GaussianBlur(6)))
+            shadow.paste(
+                (0, 0, 0, 235), 
+                (pos_x + 2, pos_y + 4), 
+                mask=raw_logo.split()[3].filter(ImageFilter.GaussianBlur(6))
+            )
             canvas.alpha_composite(shadow)
-            canvas.paste(l_img, (lx, ly), l_img)
+            canvas.alpha_composite(raw_logo, (pos_x, pos_y))
             return
         except Exception:
             pass
-    
-    # Elegant fallback emblem if logo.png is not yet present
+
+    # Fallback text emblem if no logo file exists
     draw = ImageDraw.Draw(canvas)
     crest_f = get_font("Cinzel_Bold", 20)
     crest_t = "E C H O E S   O F   W I S D O M"
@@ -263,15 +291,23 @@ def render_post_canvas(bg_img, post_data):
     
     draw = ImageDraw.Draw(canvas)
     
-    # Category Pill using ASCII bullets (Zero missing-character boxes)
+    # Category Header with Drawn Vector Wings (Zero Tofu Risk)
     cat_f = get_font("Cinzel_Bold", 26)
     clean_cat = post_data['category'].strip().upper()
-    cat_t = f"•   {clean_cat}   •"
-    cw = draw.textlength(cat_t, font=cat_f)
-    draw.text(((w - cw) // 2 + 1, 271), cat_t, font=cat_f, fill=(0, 0, 0, 220))
-    draw.text(((w - cw) // 2, 270), cat_t, font=cat_f, fill=(218, 175, 55, 255))
+    cw = draw.textlength(clean_cat, font=cat_f)
+    cx = (w - cw) // 2
+    cy = 270
+    draw.text((cx + 1, cy + 1), clean_cat, font=cat_f, fill=(0, 0, 0, 220))
+    draw.text((cx, cy), clean_cat, font=cat_f, fill=(218, 175, 55, 255))
     
-    # Headline in Cinzel Bold
+    # Left and right gold hairline wings
+    wing_w = 40
+    gap = 16
+    line_y = cy + 14
+    draw.line([(cx - gap - wing_w, line_y), (cx - gap, line_y)], fill=(218, 175, 55, 210), width=2)
+    draw.line([(cx + cw + gap, line_y), (cx + cw + gap + wing_w, line_y)], fill=(218, 175, 55, 210), width=2)
+    
+    # Headline in Cinzel Bold with Dual Shadows
     hl_f = get_font("Cinzel_Bold", 88)
     hl_lines = wrap_text(draw, post_data['headline'].upper(), hl_f, 860)
     line_h = int(88 * 1.28)
@@ -303,13 +339,19 @@ def render_post_canvas(bg_img, post_data):
         draw.text((bx, by), bl, font=body_f, fill=(240, 244, 250, 255))
         by += int(42 * 1.36)
         
-    # Attribution using ASCII bullets
+    # Philosopher Attribution with Drawn Vector Wings (Zero Tofu Risk)
     att_f = get_font("Cinzel_Bold", 24)
     clean_att = post_data['attribution'].strip().upper()
-    att_t = f"•   {clean_att}   •"
-    aw = draw.textlength(att_t, font=att_f)
-    draw.text(((w - aw) // 2 + 1, by + 26), att_t, font=att_f, fill=(0, 0, 0, 220))
-    draw.text(((w - aw) // 2, by + 25), att_t, font=att_f, fill=(218, 175, 55, 255))
+    aw = draw.textlength(clean_att, font=att_f)
+    ax = (w - aw) // 2
+    ay = by + 25
+    draw.text((ax + 1, ay + 1), clean_att, font=att_f, fill=(0, 0, 0, 220))
+    draw.text((ax, ay), clean_att, font=att_f, fill=(218, 175, 55, 255))
+    
+    # Left and right gold hairline wings
+    att_line_y = ay + 12
+    draw.line([(ax - gap - wing_w, att_line_y), (ax - gap, att_line_y)], fill=(218, 175, 55, 210), width=2)
+    draw.line([(ax + aw + gap, att_line_y), (ax + aw + gap + wing_w, att_line_y)], fill=(218, 175, 55, 210), width=2)
     
     return canvas.convert("RGB")
 
