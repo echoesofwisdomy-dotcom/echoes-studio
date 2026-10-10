@@ -6,7 +6,7 @@ import random
 from datetime import datetime, timedelta, timezone
 import requests
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import streamlit as st
 import streamlit.components.v1 as components
 from google import genai
@@ -62,26 +62,37 @@ def save_db(data):
 db = load_db()
 
 # ---------------------------------------------------------
-# 3. DIRECT GSTATIC FONT ENGINE (NO JSDELIVR / GITHUB RATE LIMITS)
+# 3. HIGH-RELIABILITY FONT ENGINE
 # ---------------------------------------------------------
-GSTATIC_FONTS = {
-    "Cinzel_Bold": "https://fonts.gstatic.com/s/cinzel/v23/8vIQ776mE3tYOmt9_ZUC.ttf",
-    "Cinzel_Reg": "https://fonts.gstatic.com/s/cinzel/v23/8vIQ776mE3tYOmt9_ZQ.ttf",
-    "Cormorant_Italic": "https://fonts.gstatic.com/s/cormorantgaramond/v19/co3bmX5slCNuHLi8bLeY9MK7whWMhyjYpHtK.ttf"
+FONT_SOURCES = {
+    "Cinzel_Bold": [
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/cinzel/static/Cinzel-Bold.ttf",
+        "https://fonts.gstatic.com/s/cinzel/v23/8vIQ776mE3tYOmt9_ZUC.ttf"
+    ],
+    "Cinzel_Reg": [
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/cinzel/static/Cinzel-Regular.ttf",
+        "https://fonts.gstatic.com/s/cinzel/v23/8vIQ776mE3tYOmt9_ZQ.ttf"
+    ],
+    "Cormorant_Italic": [
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/static/CormorantGaramond-Italic.ttf",
+        "https://fonts.gstatic.com/s/cormorantgaramond/v19/co3bmX5slCNuHLi8bLeY9MK7whWMhyjYpHtK.ttf"
+    ]
 }
 
 def ensure_fonts():
     headers = {"User-Agent": "Mozilla/5.0"}
-    for name, url in GSTATIC_FONTS.items():
+    for name, urls in FONT_SOURCES.items():
         path = os.path.join(FONTS_DIR, f"{name}.ttf")
         if not os.path.exists(path) or os.path.getsize(path) < 10000:
-            try:
-                res = requests.get(url, headers=headers, timeout=12)
-                if res.status_code == 200 and len(res.content) > 10000:
-                    with open(path, "wb") as f:
-                        f.write(res.content)
-            except Exception:
-                pass
+            for u in urls:
+                try:
+                    res = requests.get(u, headers=headers, timeout=12)
+                    if res.status_code == 200 and len(res.content) > 10000:
+                        with open(path, "wb") as f:
+                            f.write(res.content)
+                        break
+                except Exception:
+                    continue
 
 ensure_fonts()
 
@@ -98,30 +109,72 @@ def get_font(name, size):
         return ImageFont.load_default()
 
 # ---------------------------------------------------------
-# 4. CURATED 4K THEMATIC VISUAL VAULT
+# 4. 50 CURATED HIGH-ENGAGEMENT VISUAL VAULT
 # ---------------------------------------------------------
-THEMATIC_PHOTO_VAULT = {
-    "SEA_CLIFF": [
+EXPANDED_VAULT = {
+    "CLASSICAL_STATUE": [
+        {"name": "Classical Roman Marble Bust in Shadow", "url": "https://images.unsplash.com/photo-1580136579312-94651dfd596d?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Chiaroscuro Hellenistic Bronze Philosopher", "url": "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Weathered Greek Marble Profile", "url": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Roman Travertine Carved Relief", "url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Winged Victory of Samothrace Drapery", "url": "https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Pensive Stoic Thinker in Museum Hall", "url": "https://images.unsplash.com/photo-1554907984-15263bfd63bd?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Marble Column Capital Detail", "url": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1080&h=1350&q=88"}
+    ],
+    "FINE_ART_PAINTING": [
+        {"name": "Epic Classical Battle Chiaroscuro", "url": "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Renaissance Council in Deep Candlelight", "url": "https://images.unsplash.com/photo-1582561424760-0321d75e81fa?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Dramatic Historic Colonnade Oil Painting", "url": "https://images.unsplash.com/photo-1544717302-de2939b7ef71?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Atmospheric Classical Harbor Twilight", "url": "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Baroque Chiaroscuro Figure Study", "url": "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Ancient Roman Forum Oil Panorama", "url": "https://images.unsplash.com/photo-1578321272176-b7bbc0679853?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Mythological Solitude Canvas", "url": "https://images.unsplash.com/photo-1579783901586-78822e0ac93f?auto=format&fit=crop&w=1080&h=1350&q=88"}
+    ],
+    "SEA_AND_CLIFFS": [
         {"name": "Rugged Sea Cliffs Against Storm Surge", "url": "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=1080&h=1350&q=88"},
         {"name": "Dark Volcanic Coast & Breaking Ocean Swell", "url": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Sheer Atlantic Ocean Cliff Edge", "url": "https://images.unsplash.com/photo-1476673160081-cf065607f449?auto=format&fit=crop&w=1080&h=1350&q=88"}
+        {"name": "Sheer Atlantic Ocean Cliff Edge", "url": "https://images.unsplash.com/photo-1476673160081-cf065607f449?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Towering Sea Stacks in Heavy Surf", "url": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Nordic Basalt Waves at Dusk", "url": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Deep Oceanic Midnight Surge", "url": "https://images.unsplash.com/photo-1439405326854-014607f694d7?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Unbroken Stone Reef Facing Storm", "url": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ],
-    "MARBLE_STATUE": [
-        {"name": "Classical Roman Marble Bust in Dramatic Shadow", "url": "https://images.unsplash.com/photo-1580136579312-94651dfd596d?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Chiaroscuro Hellenistic Bronze Philosopher", "url": "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Weathered Greek Marble Profile", "url": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1080&h=1350&q=88"}
-    ],
-    "DARK_CITADEL": [
+    "CITADEL_AND_ARCHES": [
         {"name": "Roman Colosseum Arches at Twilight", "url": "https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Ancient Classical Stone Portico", "url": "https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=1080&h=1350&q=88"}
+        {"name": "Ancient Classical Stone Portico", "url": "https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Atmospheric Stone Fortress Ruins", "url": "https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Sunken Roman Temple Columns", "url": "https://images.unsplash.com/photo-1529154036614-a60975f5c760?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Monolithic Vaulted Stone Corridor", "url": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Antique Iron Gate to Classical Sanctuary", "url": "https://images.unsplash.com/photo-1533158307587-828f0a76ef46?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Pantheon Ceiling Oculus Rays", "url": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ],
-    "ALPINE_PEAKS": [
-        {"name": "Alpine Summit Above Mist", "url": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Granite Mountain Ridge at Sunset", "url": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?auto=format&fit=crop&w=1080&h=1350&q=88"}
+    "ALPINE_AND_SUMMITS": [
+        {"name": "Alpine Summit Above Clouds", "url": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Granite Mountain Ridge at Sunset", "url": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Solitary Peak in Morning Alpenglow", "url": "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Glacial Mountain Lake Reflection", "url": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Jagged Dolomite Ridge Above Fog", "url": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Towering Snow Summit in Solitude", "url": "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "High Altitude Glacier Plateau", "url": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ],
-    "DEEP_WORK": [
+    "MISTY_FOREST": [
+        {"name": "Misty Redwood Sunbeams in Silence", "url": "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Dark Pine Forest in Heavy Fog", "url": "https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Solitary Ancient Oak in Morning Mist", "url": "https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Evergreen Ridge Under Cloud Cover", "url": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Ancient Birch Forest Pathway", "url": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Sunbeams Breaking Through Deep Canopy", "url": "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Still Lake Surrounded by Foggy Pines", "url": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1080&h=1350&q=88"}
+    ],
+    "MODERN_WORKSPACE": [
         {"name": "Quiet Architect Workspace with Clean Lines", "url": "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1080&h=1350&q=88"},
-        {"name": "Minimalist Slate & Timber Study", "url": "https://images.unsplash.com/photo-1507842229451-7f01be7fe7ab?auto=format&fit=crop&w=1080&h=1350&q=88"}
+        {"name": "Minimalist Slate & Timber Study", "url": "https://images.unsplash.com/photo-1507842229451-7f01be7fe7ab?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Morning Espresso & Leather Journal Focus", "url": "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Solitary Reader in Neoclassical Library", "url": "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Modern High-Rise Skyline at Dawn", "url": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Curated Minimal Desk & Ceramic Lamp", "url": "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Evening City Skyline from Quiet Study", "url": "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1080&h=1350&q=88"},
+        {"name": "Architectural Spiral Concrete Stairs", "url": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1080&h=1350&q=88"}
     ]
 }
 
@@ -142,7 +195,7 @@ def get_next_recommended_slot():
     return candidate
 
 # ---------------------------------------------------------
-# 6. GRAPHICS COMPOSITOR (ZERO TOFU, ZERO FONT COLLAPSE)
+# 6. GRAPHICS COMPOSITOR (LOGO STAMP + CLEAN TYPOGRAPHY)
 # ---------------------------------------------------------
 def wrap_text(draw, text, font, max_width):
     lines = []
@@ -170,9 +223,15 @@ def stamp_brand(canvas):
     if os.path.exists(logo_file):
         try:
             l_img = Image.open(logo_file).convert("RGBA")
-            l_img.thumbnail((115, 115), Image.Resampling.LANCZOS)
+            l_img.thumbnail((120, 120), Image.Resampling.LANCZOS)
             lw, lh = l_img.size
-            canvas.paste(l_img, ((1080 - lw) // 2, 115), l_img)
+            lx = (1080 - lw) // 2
+            ly = 110
+            # Soft protective glow shadow
+            shadow = Image.new("RGBA", (1080, 1350), (0, 0, 0, 0))
+            shadow.paste((0, 0, 0, 230), (lx + 2, ly + 4), mask=l_img.split()[3].filter(ImageFilter.GaussianBlur(6)))
+            canvas.alpha_composite(shadow)
+            canvas.paste(l_img, (lx, ly), l_img)
             return
         except Exception:
             pass
@@ -204,7 +263,7 @@ def render_post_canvas(bg_img, post_data):
     
     draw = ImageDraw.Draw(canvas)
     
-    # Category Pill using ASCII bullets (Zero box artifacts)
+    # Category Pill using ASCII bullets (Zero missing-character boxes)
     cat_f = get_font("Cinzel_Bold", 26)
     clean_cat = post_data['category'].strip().upper()
     cat_t = f"•   {clean_cat}   •"
@@ -257,27 +316,36 @@ def render_post_canvas(bg_img, post_data):
 # ---------------------------------------------------------
 # 7. AI SYNTHESIS PIPELINE
 # ---------------------------------------------------------
+PHILOSOPHERS_POOL = [
+    "Marcus Aurelius", "Seneca", "Epictetus", "Friedrich Nietzsche", 
+    "Arthur Schopenhauer", "Ralph Waldo Emerson", "Lao Tzu", "Sun Tzu", "Michel de Montaigne"
+]
+
 def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_directive):
     clean_key = raw_api_key.strip().strip('"').strip("'")
     client = genai.Client(api_key=clean_key)
     blacklist = db.get("blacklisted_headlines", [])
     blacklist_str = "\n".join([f"- {h}" for h in blacklist[-40:]]) if blacklist else "None."
     
+    target_philosopher = philosopher
+    if philosopher in ["🎲 Random / AI Choice", "Any"]:
+        target_philosopher = random.choice(PHILOSOPHERS_POOL)
+
     prompt = f"""
     Role: Creative Director for 'Echoes of Wisdom'.
     Theme: {visual_theme}
-    Preferred Philosopher: {philosopher}
-    User Direction/Voice Input: {custom_directive or 'Synthesize an authoritative, novel Stoic lesson.'}
+    Preferred Philosopher: {target_philosopher}
+    User Direction/Voice Input: {custom_directive or 'Synthesize an authoritative, timeless lesson of resilience and inner strength.'}
     
     STRICT BLACKLIST (DO NOT USE OR REPHRASE):
     {blacklist_str}
     
     Output JSON ONLY:
     {{
-      "category": "CONCISE PILLAR (e.g. EMOTIONAL MASTERY, FORTITUDE)",
+      "category": "CONCISE PILLAR (e.g. EMOTIONAL MASTERY, FORTITUDE, INNER CITADEL, DEEP FOCUS)",
       "headline": "BOLD 2-4 WORD HOOK",
       "body_text": "One powerful 12-18 word sentence explaining the hook.",
-      "attribution": "{philosopher.upper() if philosopher != 'Any' else 'MARCUS AURELIUS'}",
+      "attribution": "{target_philosopher.upper()}",
       "post_caption": "Full Facebook/Instagram caption with hook, lesson, binary debate CTA (1️⃣/2️⃣), handles, and hashtags."
     }}
     """
@@ -334,15 +402,32 @@ st.info(f"📅 **Next Recommended Publishing Window:**\n\n**{rec_slot.strftime('
 with st.expander("⚙️ Creative Controls & Voice Input", expanded=True):
     col1, col2 = st.columns(2)
     with col1:
-        selected_theme = st.selectbox(
-            "Visual Backdrop",
-            ["SEA_CLIFF", "MARBLE_STATUE", "DARK_CITADEL", "ALPINE_PEAKS", "DEEP_WORK"]
-        )
+        backdrop_options = [
+            "🎲 Random / AI Best Match",
+            "CLASSICAL_STATUE",
+            "FINE_ART_PAINTING",
+            "SEA_AND_CLIFFS",
+            "CITADEL_AND_ARCHES",
+            "ALPINE_AND_SUMMITS",
+            "MISTY_FOREST",
+            "MODERN_WORKSPACE"
+        ]
+        selected_theme = st.selectbox("Visual Backdrop", backdrop_options)
+        
     with col2:
-        selected_philosopher = st.selectbox(
-            "Philosopher",
-            ["Any", "Marcus Aurelius", "Seneca", "Epictetus"]
-        )
+        philosopher_options = [
+            "🎲 Random / AI Choice",
+            "Marcus Aurelius",
+            "Seneca",
+            "Epictetus",
+            "Friedrich Nietzsche",
+            "Arthur Schopenhauer",
+            "Ralph Waldo Emerson",
+            "Lao Tzu",
+            "Sun Tzu",
+            "Michel de Montaigne"
+        ]
+        selected_philosopher = st.selectbox("Philosopher", philosopher_options)
 
     components.html("""
     <div style="font-family: sans-serif; margin-bottom: 8px;">
@@ -406,12 +491,16 @@ if generate_btn:
         st.error("Please provide a valid Gemini API Key above.")
     else:
         with st.spinner("Synthesizing concept & rendering 4K canvas..."):
-            concept, err = generate_stoic_concept(api_key, selected_theme, selected_philosopher, custom_input)
+            theme_choice = selected_theme
+            if theme_choice.startswith("🎲"):
+                theme_choice = random.choice(list(EXPANDED_VAULT.keys()))
+                
+            concept, err = generate_stoic_concept(api_key, theme_choice, selected_philosopher, custom_input)
             
             if err or not concept:
                 st.error(f"⚠️ API Error: {err}")
             else:
-                vault_items = THEMATIC_PHOTO_VAULT.get(selected_theme, THEMATIC_PHOTO_VAULT["SEA_CLIFF"])
+                vault_items = EXPANDED_VAULT.get(theme_choice, EXPANDED_VAULT["CLASSICAL_STATUE"])
                 b_list = db.get("blacklisted_backdrops", [])
                 available = [it for it in vault_items if it["name"] not in b_list]
                 if not available:
