@@ -13,7 +13,7 @@ from google import genai
 from google.genai import types
 
 # ---------------------------------------------------------
-# 1. PAGE SETUP & OBSIDIAN TECH UI (NO CUTOFF / HIGH CONTRAST)
+# 1. PAGE SETUP & OBSIDIAN TECH UI
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Echoes Studio // Terminal",
@@ -46,7 +46,7 @@ st.markdown("""
         max-width: 680px !important;
     }
 
-    /* Expander / Accordion Fixes (Eliminates White Backgrounds) */
+    /* Expander / Accordion Panels */
     div[data-testid="stExpander"] {
         background: #0E1626 !important;
         border: 1px solid rgba(56, 189, 248, 0.25) !important;
@@ -93,7 +93,7 @@ st.markdown("""
         color: #F8FAFC !important;
     }
 
-    .stTextInput>div>div>input, .stTextArea textarea {
+    .stTextInput>div>div>input, .stTextArea textarea, .stDateInput input, .stTimeInput input {
         background-color: #0A0F1D !important;
         border: 1px solid rgba(56, 189, 248, 0.25) !important;
         border-radius: 8px !important;
@@ -118,6 +118,39 @@ st.markdown("""
         transition: all 0.2s ease !important;
     }
 
+    .stButton>button[kind="primary"]:hover,
+    .stButton>button[kind="primary"]:focus,
+    .stButton>button[kind="primary"]:active {
+        background: linear-gradient(135deg, #0369A1 0%, #0284C7 100%) !important;
+        color: #FFFFFF !important;
+        border-color: #38BDF8 !important;
+        box-shadow: 0 0 35px rgba(56, 189, 248, 0.6) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Secondary Action Buttons (Default State) */
+    .stButton>button:not([kind="primary"]) {
+        background: #111B30 !important;
+        color: #E2E8F0 !important;
+        border: 1px solid rgba(56, 189, 248, 0.25) !important;
+        border-radius: 8px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    /* Secondary Action Buttons (Hover / Focus / Active Fix: No Whiteout) */
+    .stButton>button:not([kind="primary"]):hover,
+    .stButton>button:not([kind="primary"]):focus,
+    .stButton>button:not([kind="primary"]):active {
+        background: #172544 !important;
+        color: #38BDF8 !important;
+        border-color: #38BDF8 !important;
+        box-shadow: 0 0 18px rgba(56, 189, 248, 0.35) !important;
+    }
+
+    /* Gallery Download Button */
     .stDownloadButton>button {
         background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
         color: white !important;
@@ -127,6 +160,16 @@ st.markdown("""
         font-family: 'JetBrains Mono', monospace !important;
         font-weight: 700 !important;
         box-shadow: 0 0 20px rgba(5, 150, 105, 0.3) !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .stDownloadButton>button:hover,
+    .stDownloadButton>button:focus,
+    .stDownloadButton>button:active {
+        background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+        color: #FFFFFF !important;
+        border-color: #34D399 !important;
+        box-shadow: 0 0 28px rgba(52, 211, 153, 0.5) !important;
     }
 
     /* Telemetry Pill Badges */
