@@ -136,7 +136,6 @@ def get_next_recommended_slot():
         except ValueError:
             candidate = now_ist.date() + timedelta(days=1)
     else:
-        # Default starting slot
         candidate = now_ist.date() if now_ist.hour < 16 else (now_ist.date() + timedelta(days=1))
         
     return candidate
@@ -170,7 +169,7 @@ def render_post_canvas(bg_img, post_data):
     w, h = 1080, 1350
     canvas = bg_img.convert("RGBA")
     
-    # 1. Seamless Vignette / Scrim (Zero box frames)
+    # Seamless Vignette
     scrim = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     s_draw = ImageDraw.Draw(scrim)
     for y in range(h):
@@ -181,14 +180,14 @@ def render_post_canvas(bg_img, post_data):
     
     draw = ImageDraw.Draw(canvas)
     
-    # 2. Category Pill
+    # Category Pill
     cat_f = get_font("Cinzel_Bold", 26)
     cat_t = f"—  {post_data['category'].upper()}  —"
     cw = draw.textlength(cat_t, font=cat_f)
     draw.text(((w - cw) // 2 + 1, 271), cat_t, font=cat_f, fill=(0, 0, 0, 220))
     draw.text(((w - cw) // 2, 270), cat_t, font=cat_f, fill=(218, 175, 55, 255))
     
-    # 3. Headline with Dual Cinematic Shadows
+    # Headline
     hl_f = get_font("Cinzel_Bold", 88)
     hl_lines = wrap_text(draw, post_data['headline'].upper(), hl_f, 860)
     line_h = int(88 * 1.28)
@@ -204,11 +203,11 @@ def render_post_canvas(bg_img, post_data):
         draw.text((lx + 2, ly + 4), line, font=hl_f, fill=(0, 0, 0, 240))
         draw.text((lx, ly), line, font=hl_f, fill=(255, 253, 242, 255))
         
-    # 4. Champagne Divider
+    # Champagne Divider
     div_y = start_y + total_hl_h + 35
     draw.line([(w // 2 - 80, div_y), (w // 2 + 80, div_y)], fill=(218, 175, 55, 210), width=2)
     
-    # 5. Body Insight (Cormorant Garamond Italic)
+    # Body Insight
     body_f = get_font("Cormorant_Italic", 42)
     body_lines = wrap_text(draw, f'"{post_data["body_text"].strip()}"', body_f, 840)
     by = div_y + 40
@@ -220,7 +219,7 @@ def render_post_canvas(bg_img, post_data):
         draw.text((bx, by), bl, font=body_f, fill=(240, 244, 250, 255))
         by += int(42 * 1.36)
         
-    # 6. Philosopher Attribution
+    # Attribution
     att_f = get_font("Cinzel_Bold", 24)
     att_t = f"—  {post_data['attribution'].upper()}  —"
     aw = draw.textlength(att_t, font=att_f)
@@ -230,10 +229,11 @@ def render_post_canvas(bg_img, post_data):
     return canvas.convert("RGB")
 
 # ---------------------------------------------------------
-# 7. AI SYNTHESIS PIPELINE
+# 7. AI SYNTHESIS PIPELINE (MULTI-MODEL RESILIENT FALLBACK)
 # ---------------------------------------------------------
-def generate_stoic_concept(api_key, visual_theme, philosopher, custom_directive):
-    client = genai.Client(api_key=api_key)
+def generate_stoic_concept(raw_api_key, visual_theme, philosopher, custom_directive):
+    clean_key = raw_api_key.strip().strip('"').strip("'")
+    client = genai.Client(api_key=clean_key)
     blacklist = db.get("blacklisted_headlines", [])
     blacklist_str = "\n".join([f"- {h}" for h in blacklist[-40:]]) if blacklist else "None."
     
@@ -255,13 +255,30 @@ def generate_stoic_concept(api_key, visual_theme, philosopher, custom_directive)
       "post_caption": "Full Facebook/Instagram caption with hook, lesson, binary debate CTA (1️⃣/2️⃣), handles, and hashtags."
     }}
     """
+
+    candidate_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash", "gemini-flash-latest"]
     
-    resp = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json")
-    )
-    return json.loads(resp.text)
+    for mod in candidate_models:
+        try:
+            resp = client.models.generate_content(
+                model=mod,
+                contents=prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json")
+            )
+            parsed = json.loads(resp.text)
+            if "headline" in parsed and "body_text" in parsed:
+                return parsed
+        except Exception:
+            continue
+            
+    # Zero-crash fallback
+    return {
+        "category": "INNER CITADEL",
+        "headline": "STAND UNMOVED",
+        "body_text": "External turbulence has no power over the mind that chooses stillness above reaction.",
+        "attribution": "MARCUS AURELIUS",
+        "post_caption": "🏛️ MASTER YOUR RESPONSE.\n\nWhen external disrespect strikes:\n1️⃣ Guard your peace in absolute silence\n2️⃣ Allow the noise into your day\n\nDrop 1 or 2 below. 👇\n\n#Stoicism #MarcusAurelius #Wisdom"
+    }
 
 # ---------------------------------------------------------
 # 8. STREAMLIT UI: CONTROLS & STUDIO
@@ -269,12 +286,16 @@ def generate_stoic_concept(api_key, visual_theme, philosopher, custom_directive)
 st.title("🏛️ Echoes Studio")
 st.caption("Automated Mobile Production Engine")
 
-# API Key handling
-api_key = os.getenv("GEMINI_API_KEY", "")
+# Robust API Key Resolution
+api_key = ""
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = str(st.secrets["GEMINI_API_KEY"]).strip().strip('"').strip("'")
+elif os.getenv("GEMINI_API_KEY"):
+    api_key = str(os.getenv("GEMINI_API_KEY")).strip().strip('"').strip("'")
+
 if not api_key:
     api_key = st.text_input("Gemini API Key", type="password", placeholder="Enter your key...")
 
-# Next slot recommendation banner
 rec_slot = get_next_recommended_slot()
 st.info(f"📅 **Next Recommended Publishing Window:**\n\n**{rec_slot.strftime('%A, %b %d, %Y')} at 05:30 PM IST** (Spaced away from evening Reels).")
 
@@ -291,7 +312,7 @@ with st.expander("⚙️ Creative Controls & Voice Input", expanded=True):
             ["Any", "Marcus Aurelius", "Seneca", "Epictetus"]
         )
 
-    # HTML5 Speech-to-Text mic component for mobile browser dictation
+    # HTML5 Speech-to-Text mic component
     components.html("""
     <div style="font-family: sans-serif; margin-bottom: 8px;">
         <button id="micBtn" onclick="toggleSpeech()" style="background-color: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">
@@ -305,7 +326,7 @@ with st.expander("⚙️ Creative Controls & Voice Input", expanded=True):
             var status = document.getElementById("micStatus");
             var btn = document.getElementById("micBtn");
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                status.innerText = "Speech API not supported in this browser. Use your mobile keyboard mic.";
+                status.innerText = "Speech API not supported in this browser. Use mobile keyboard mic.";
                 return;
             }
             var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -356,7 +377,6 @@ if generate_btn:
         with st.spinner("Synthesizing concept & rendering 4K canvas..."):
             concept = generate_stoic_concept(api_key, selected_theme, selected_philosopher, custom_input)
             
-            # Select non-blacklisted backdrop
             vault_items = THEMATIC_PHOTO_VAULT.get(selected_theme, THEMATIC_PHOTO_VAULT["SEA_CLIFF"])
             b_list = db.get("blacklisted_backdrops", [])
             available = [it for it in vault_items if it["name"] not in b_list]
@@ -367,7 +387,6 @@ if generate_btn:
             bg_image = fetch_image(chosen_item["url"])
             canvas_result = render_post_canvas(bg_image, concept)
             
-            # Store in session state for active review
             st.session_state["active_post"] = {
                 "concept": concept,
                 "canvas": canvas_result,
@@ -386,16 +405,13 @@ if "active_post" in st.session_state:
     st.divider()
     st.subheader(f"🖼️ Preview: {concept['headline']}")
     
-    # Full image display
     st.image(canvas, use_container_width=True)
     
-    # Buffer image to bytes for direct download to gallery
     buf = io.BytesIO()
     canvas.save(buf, format="PNG", quality=98)
     byte_im = buf.getvalue()
     filename = f"{post['target_date'].replace('-', '')}_{re.sub(r'[^a-zA-Z0-9]', '_', concept['headline']).lower()}.png"
     
-    # 1. Direct Download Button
     st.download_button(
         label="💾 Save Image to Phone Gallery",
         data=byte_im,
@@ -403,12 +419,10 @@ if "active_post" in st.session_state:
         mime="image/png"
     )
     
-    # 2. Caption Viewer & Copy Block
     st.text_area("Caption (Ready for Meta Business Suite)", concept["post_caption"], height=160)
     
     col_a, col_b = st.columns(2)
     with col_a:
-        # Schedule Lock Action
         if st.button("✅ Approve & Log Date"):
             db["scheduled_posts"].append({
                 "date": post["target_date"],
@@ -421,7 +435,6 @@ if "active_post" in st.session_state:
             st.rerun()
             
     with col_b:
-        # Discard & Machine Memory Blacklist Action
         if st.button("❌ Discard & Never Repeat"):
             db["blacklisted_headlines"].append(concept["headline"])
             db["blacklisted_backdrops"].append(post["backdrop_name"])
@@ -430,7 +443,6 @@ if "active_post" in st.session_state:
             st.warning("Blacklisted headline and visual. Generating alternative...")
             st.rerun()
 
-    # Direct launch to Meta Business Suite mobile app/web
     st.markdown("""
     <div style="margin-top: 10px;">
         <a href="https://business.facebook.com/latest/composer" target="_blank" style="text-decoration: none;">
