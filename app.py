@@ -585,7 +585,7 @@ def generate_stoic_concept_deduped(raw_api_key, visual_theme, philosopher, custo
     }}
     """
 
-    candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]
+    candidate_models = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"]
     errs = []
 
     for mod in candidate_models:
@@ -706,56 +706,6 @@ with st.expander("🎛️ STUDIO CONTROLS & COMPOSITION", expanded=True):
         col_t1, col_t2 = st.columns(2)
         with col_t1: show_dilemma = st.checkbox("Dilemma Strip", value=True, help="1 vs 2 poll on image bottom")
         with col_t2: apply_grain = st.checkbox("35mm Film Grain", value=True, help="Removes digital smoothness")
-
-    components.html("""
-    <div style="font-family: 'JetBrains Mono', monospace; margin: 4px 0 10px 0;">
-        <button id="micBtn" onclick="toggleSpeech()" style="background: rgba(56, 189, 248, 0.12); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.35); padding: 9px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; letter-spacing: 0.05em;">
-            🎙️ TAP TO DICTATE CONCEPT
-        </button>
-        <span id="micStatus" style="font-size: 12px; color: #64748B; margin-left: 10px;"></span>
-    </div>
-    <script>
-        var recognition;
-        function toggleSpeech() {
-            var status = document.getElementById("micStatus");
-            var btn = document.getElementById("micBtn");
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                status.innerText = "Dictation not supported in browser. Use keyboard mic.";
-                return;
-            }
-            var SpeechRecognition = window.SpeechRecognition |
-
-| window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
-            recognition.onstart = function() {
-                btn.style.background = "rgba(239, 68, 68, 0.2)";
-                btn.style.color = "#F87171";
-                btn.innerText = "🛑 LISTENING...";
-            };
-            recognition.onresult = function(event) {
-                var transcript = event.results[0][0].transcript;
-                var inputs = window.parent.document.querySelectorAll('input[type="text"]');
-                for (var i = 0; i < inputs.length; i++) {
-                    if (inputs[i].placeholder.includes("coworker") |
-
-| inputs[i].getAttribute("aria-label") === "Tactical Prompt / Custom Dilemma") {
-                        inputs[i].value = transcript;
-                        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                }
-            };
-            recognition.onend = function() {
-                btn.style.background = "rgba(56, 189, 248, 0.12)";
-                btn.style.color = "#38BDF8";
-                btn.innerText = "🎙️ TAP TO DICTATE CONCEPT";
-            };
-            recognition.start();
-        }
-    </script>
-    """, height=48)
 
     custom_input = st.text_input(
         "Tactical Prompt / Custom Dilemma",
@@ -923,7 +873,7 @@ if db.get("scheduled_posts"):
     with st.expander(f"📋 SCHEDULED QUEUE ({len(db['scheduled_posts'])})", expanded=False):
         for item in reversed(db["scheduled_posts"]):
             st.markdown(f"""
-            <div style="background: #0A0F1D; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+            <div style="background: #080B11; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
                 <div>
                     <span style="color: #38BDF8; font-weight: 700;">{item.get('date')}</span>
                     <span style="color: #64748B;"> @ </span>
