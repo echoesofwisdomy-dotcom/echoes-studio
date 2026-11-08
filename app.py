@@ -858,7 +858,7 @@ if "active_post" in st.session_state:
 
     st.markdown("""
     <div style="margin-top: 12px;">
-        <a href="[https://business.facebook.com/latest/composer](https://business.facebook.com/latest/composer)" target="_blank" style="text-decoration: none;">
+        <a href="https://business.facebook.com/latest/composer" target="_blank" style="text-decoration: none;">
             <button style="width: 100%; height: 3rem; background: #1877F2; color: white; border: none; border-radius: 8px; font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 13px; cursor: pointer; box-shadow: 0 4px 15px rgba(24, 119, 242, 0.3);">
                 🌐 OPEN META BUSINESS SUITE SCHEDULER
             </button>
