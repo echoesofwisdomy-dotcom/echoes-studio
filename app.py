@@ -1,5 +1,6 @@
 import os, io, json, re, random, base64, requests
 from datetime import datetime, timedelta, timezone, time as dt_time
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
 import streamlit as st
 import streamlit.components.v1 as components
@@ -819,7 +820,7 @@ st.caption(f"Source: `{st.session_state.get('active_card_src', 'Vault')}` | Pill
 # ---------------------------------------------------------
 st.markdown("### 🎨 2. Background Artwork & Watermark Crop")
 st.text_area("AI Image Prompt (Copy for Google Flow / Imagen if generating custom art)", card.get("bg_scene", ""), height=68)
-render_copy("bg_pr", "COPY ARTWORK PROMPT", card.get("bg_scene", ""))
+render_copy_btn("bg_pr", "COPY ARTWORK PROMPT", card.get("bg_scene", ""))
 
 col_bg1, col_bg2, col_bg3 = st.columns([2, 1, 1])
 with col_bg1:
