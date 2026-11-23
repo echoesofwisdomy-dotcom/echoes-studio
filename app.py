@@ -108,8 +108,11 @@ for d in [DATA_DIR, FONTS_DIR, BG_CACHE_DIR]:
     os.makedirs(d, exist_ok=True)
 
 DB_PATH = os.path.join(DATA_DIR, "image_schedule.json")
+CARD_VAULT_PATH = os.path.join(DATA_DIR, "image_card_vault.json")
+ACTIVE_CARD_PATH = os.path.join(DATA_DIR, "active_image_card.json")
+SAVED_BG_PATH = os.path.join(DATA_DIR, "saved_custom_bg.png")
 API_KEY_FILE = os.path.join(DATA_DIR, "gemini_key.txt")
-CHANNEL_HANDLE_FILE = os.path.join(DATA_DIR, "channel_handle.txt")
+CHANNEL_HANDLE_FILE = os.path.join(DATA_DIR, "meta_handle.txt")
 GUIDE_URL_FILE = os.path.join(DATA_DIR, "guide_url.txt")
 EXCEL_IMAGE_TRACKER = os.path.join(DATA_DIR, "Echoes_Image_Content_Tracker.xlsx")
 
@@ -117,11 +120,15 @@ EXCEL_IMAGE_TRACKER = os.path.join(DATA_DIR, "Echoes_Image_Content_Tracker.xlsx"
 def ensure_studio_fonts():
     bold_p = os.path.join(FONTS_DIR, "DejaVuSans-Bold.ttf")
     reg_p = os.path.join(FONTS_DIR, "DejaVuSans.ttf")
-    serif_p = os.path.join(FONTS_DIR, "DejaVuSerif.ttf")
+    serif_p = os.path.join(FONTS_DIR, "DejaVuSerif-Bold.ttf")
+    italic_p = os.path.join(FONTS_DIR, "DejaVuSerif-Italic.ttf")
+    mono_p = os.path.join(FONTS_DIR, "DejaVuSansMono-Bold.ttf")
     urls = {
         bold_p: "https://raw.githubusercontent.com/dejavu-fonts/dejavu-fonts/master/ttf/DejaVuSans-Bold.ttf",
         reg_p: "https://raw.githubusercontent.com/dejavu-fonts/dejavu-fonts/master/ttf/DejaVuSans.ttf",
-        serif_p: "https://raw.githubusercontent.com/dejavu-fonts/dejavu-fonts/master/ttf/DejaVuSerif.ttf",
+        serif_p: "https://raw.githubusercontent.com/dejavu-fonts/dejavu-fonts/master/ttf/DejaVuSerif-Bold.ttf",
+        italic_p: "https://raw.githubusercontent.com/dejavu-fonts/dejavu-fonts/master/ttf/DejaVuSerif-Italic.ttf",
+        mono_p: "https://raw.githubusercontent.com/dejavu-fonts/dejavu-fonts/master/ttf/DejaVuSansMono-Bold.ttf",
     }
     for path, url in urls.items():
         if not os.path.exists(path) or os.path.getsize(path) < 10000:
@@ -132,9 +139,9 @@ def ensure_studio_fonts():
                         f.write(r.content)
             except Exception:
                 pass
-    return bold_p, reg_p, serif_p
+    return bold_p, reg_p, serif_p, italic_p, mono_p
 
-BOLD_FONT_PATH, REG_FONT_PATH, SERIF_FONT_PATH = ensure_studio_fonts()
+BOLD_FONT_PATH, REG_FONT_PATH, SERIF_FONT_PATH, ITALIC_FONT_PATH, MONO_FONT_PATH = ensure_studio_fonts()
 
 def load_font(path, size):
     try:
@@ -170,8 +177,8 @@ def save_persistent_api_key(val):
         pass
 
 def get_persistent_handle():
-    if "CHANNEL_HANDLE" in st.secrets:
-        return str(st.secrets["CHANNEL_HANDLE"]).strip()
+    if "META_CHANNEL_HANDLE" in st.secrets:
+        return str(st.secrets["META_CHANNEL_HANDLE"]).strip()
     if os.path.exists(CHANNEL_HANDLE_FILE):
         try:
             with open(CHANNEL_HANDLE_FILE, "r", encoding="utf-8") as f:
@@ -180,7 +187,7 @@ def get_persistent_handle():
                     return val
         except Exception:
             pass
-    return "@AJ-Echoes-of-Wisdom"
+    return "@EchoesOfWisdomOfficial"
 
 def save_persistent_handle(val):
     clean = val.strip()
@@ -243,6 +250,34 @@ def save_db(data):
 
 db = load_db()
 
+def load_card_vault_history():
+    if os.path.exists(CARD_VAULT_PATH):
+        try:
+            with open(CARD_VAULT_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+def save_to_card_vault_history(card_item):
+    vault = load_card_vault_history()
+    h = card_item.get("headline", "")
+    vault = [v for v in vault if v.get("headline") != h]
+    vault.insert(0, card_item)
+    vault = vault[:30]
+    try:
+        with open(CARD_VAULT_PATH, "w", encoding="utf-8") as f:
+            json.dump(vault, f, indent=2)
+    except Exception:
+        pass
+
+def save_active_card_to_disk(card_item, src_str="Saved Card"):
+    try:
+        with open(ACTIVE_CARD_PATH, "w", encoding="utf-8") as f:
+            json.dump({"card": card_item, "src": src_str}, f, indent=2)
+    except Exception:
+        pass
+
 def get_next_post_date():
     now_ist = datetime.now(timezone(timedelta(hours=5, minutes=30)))
     ld_str = db.get("last_date")
@@ -255,7 +290,7 @@ def get_next_post_date():
     return now_ist.date().strftime("%Y-%m-%d")
 
 # ---------------------------------------------------------
-# 3. 5 MASS-MARKET PILLARS (TUNED FOR MEN 35-65+ & SHARES)
+# 3. 8 CARD FORMATS, 6 PALETTES, 18+ LEADERS & MODERN/ANCIENT VAULT
 # ---------------------------------------------------------
 PILLAR_DEFINITIONS = {
     "ALL": "🎲 Smart AI Rotation (All 5 Pillars)",
@@ -263,166 +298,283 @@ PILLAR_DEFINITIONS = {
     "FINANCE": "⚖️ Financial Sovereignty & Control",
     "LEGACY": "🏛️ Father to Son: Legacy Counsel",
     "LONGEVITY": "⏳ Aging Well: Vitality After 40/60",
-    "PARABLES": "🌲 Ancient Parables & Human Nature"
+    "PARABLES": "🌲 Ancient & Modern Parables"
 }
 
+FORMAT_STYLES = {
+    "CHISELED_HERO": {
+        "label": "🏛️ Chiseled Hero Card (Ornate Frame + Diamond Divider)",
+        "desc": "Framed dark art with double corner brackets, diamond dividers, chiseled headline & reflection strip."
+    },
+    "MINIMAL_TYPO": {
+        "label": "✍️ Minimal Typographic Poster (Corner Brackets + Highlight Words)",
+        "desc": "Clean obsidian canvas with geometric corner brackets, left accent bar, serif quote & highlighted words."
+    },
+    "HIGHLIGHT_STORY": {
+        "label": "💛 Highlighted Story Card (Warm Cream + Marker Lead-In)",
+        "desc": "Warm daylight card with rounded marker-highlighted lead-in phrase and modern/illustrative lower art."
+    },
+    "SYMBOLIC_PORTRAIT": {
+        "label": "📜 Parchment Parable + Portrait (Classic Leader Card)",
+        "desc": "Warm parchment canvas with bold crimson/gold serif quote, diamond divider & lower portrait."
+    },
+    "SYMBOL_SANDWICH": {
+        "label": "🔺 Sacred Geometry Emblem Card (Star & Compass Shapes)",
+        "desc": "Dark canvas framed by geometric star & compass emblems at top & bottom with provoking hook."
+    },
+    "BATTLEFIELD_VOW": {
+        "label": "⚔️ Full-Bleed Scene + Accent Power Word Vow",
+        "desc": "Full-bleed dramatic/modern scene with framed rules and a single vivid accent power word."
+    },
+    "NUMBERED_CHECKLIST": {
+        "label": "📋 5-Point Behavioral Checklist (Numbered Circle Badges)",
+        "desc": "Structured 5-point list with circular numbered badges, horizontal rules & reflection footer."
+    },
+    "MODERN_CONTRAST": {
+        "label": "🔀 Ancient Principle vs. Modern Trap (Split Contrast Cards)",
+        "desc": "Two rounded contrast boxes comparing what drains your strength vs. what builds lasting power."
+    }
+}
+
+ACCENT_PALETTES = {
+    "IMPERIAL_GOLD":  {"label": "👑 Imperial Gold",    "primary": (235, 192, 96, 255),  "secondary": (254, 240, 138, 220), "bg_tone": "GOLD"},
+    "GLACIAL_ICE":    {"label": "❄️ Glacial Cyan",     "primary": (110, 225, 245, 255), "secondary": (165, 243, 252, 220), "bg_tone": "ICE"},
+    "FORGE_AMBER":    {"label": "🔥 Forge Amber",      "primary": (245, 162, 72, 255),  "secondary": (253, 224, 71, 220),  "bg_tone": "AMBER"},
+    "CRIMSON_IVORY":  {"label": "🩸 Crimson & Ivory",  "primary": (225, 72, 66, 255),   "secondary": (254, 202, 202, 220), "bg_tone": "AMBER"},
+    "EMERALD_BONE":   {"label": "🌿 Emerald & Bone",   "primary": (74, 222, 128, 255),  "secondary": (187, 247, 208, 220), "bg_tone": "ICE"},
+    "ROYAL_VIOLET":   {"label": "🔮 Royal Violet",     "primary": (216, 140, 255, 255), "secondary": (243, 232, 255, 220), "bg_tone": "GOLD"},
+}
+
+LEADER_WISDOM_POOL = [
+    {"leader": "ABRAHAM LINCOLN",    "era": "Modern History",   "quote": "\"Give me six hours to chop down a tree and I will spend the first four sharpening the axe.\""},
+    {"leader": "MARCUS AURELIUS",    "era": "Ancient Rome",     "quote": "\"You have power over your mind, not outside events. Realize this, and you will find strength.\""},
+    {"leader": "WINSTON CHURCHILL",  "era": "Modern History",   "quote": "\"Success is walking from failure to failure without losing your enthusiasm.\""},
+    {"leader": "NELSON MANDELA",     "era": "Modern History",   "quote": "\"Resentment is like drinking poison and then hoping it will harm your enemies.\""},
+    {"leader": "THEODORE ROOSEVELT", "era": "Modern History",   "quote": "\"The credit belongs to the person who is actually in the arena, whose face is marred by dust and sweat.\""},
+    {"leader": "BENJAMIN FRANKLIN",  "era": "Enlightenment",    "quote": "\"Beware of little expenses; a small leak will sink a great ship.\""},
+    {"leader": "ALBERT EINSTEIN",    "era": "Modern Science",   "quote": "\"Strive not to be a success, but rather to be of value.\""},
+    {"leader": "BRUCE LEE",          "era": "Modern Philosophy","quote": "\"Be water, my friend—empty your mind, be formless, shapeless, adaptable.\""},
+    {"leader": "SENECA",             "era": "Ancient Rome",     "quote": "\"We suffer more often in imagination than in reality.\""},
+    {"leader": "EPICTETUS",          "era": "Ancient Greece",   "quote": "\"It is not what happens to you, but how you react to it that matters.\""},
+    {"leader": "VIKTOR FRANKL",      "era": "Modern Psychology","quote": "\"Between stimulus and response there is a space. In that space is our power to choose.\""},
+    {"leader": "CHARLIE MUNGER",     "era": "Modern Finance",   "quote": "\"It is remarkable how much long-term advantage people have gotten by trying to be consistently not stupid.\""},
+    {"leader": "MIYAMOTO MUSASHI",   "era": "Feudal Japan",     "quote": "\"Do nothing that is of no use; master the rhythm of patience and timing.\""},
+    {"leader": "LAO TZU",            "era": "Ancient China",    "quote": "\"Nature does not hurry, yet everything is accomplished.\""},
+    {"leader": "SOCRATES",           "era": "Ancient Greece",   "quote": "\"When the debate is lost, slander becomes the tool of the loser.\""},
+    {"leader": "CARL JUNG",          "era": "Modern Psychology","quote": "\"Until you make the unconscious conscious, it will direct your life and you will call it fate.\""},
+    {"leader": "GEORGE WASHINGTON",  "era": "Modern History",   "quote": "\"Be courteous to all, but intimate with few, and let those few be well tried before you give them confidence.\""},
+    {"leader": "SUN TZU",            "era": "Ancient China",    "quote": "\"Appear weak when you are strong, and strong when you are weak.\""}
+]
+
 CONTENT_CARDS_VAULT = [
-    # PILLAR 1: SILENT POWER & BOUNDARIES
+    # 1. CHISELED_HERO (Ancient + Ornate Frame)
     {
         "id": "IMG_UNGRASPABLE",
         "pillar": "SOVEREIGNTY",
-        "category": "SOVEREIGNTY",
+        "format_style": "CHISELED_HERO",
+        "palette": "IMPERIAL_GOLD",
+        "category": "SILENT POWER",
         "headline": "BECOME COMPLETELY UNGRASPABLE",
-        "quote": "\"He who displays no edge cannot be blunted, disarming adversaries through impenetrable strategic emptiness.\"",
-        "author": "LAO TZU",
+        "quote": "\"He who displays no edge cannot be blunted, disarming adversaries through impenetrable strategic calm.\"",
+        "author": "LAO TZU • ANCIENT CHINA",
+        "accent_word": "UNGRASPABLE",
         "reflection_prompt": "WHEN CHALLENGED PUBLICLY, WHAT HELPS YOU KEEP YOUR COMPOSURE?",
         "sub_prompt": "SHARE YOUR EXPERIENCE IN THE COMMENTS",
-        "bg_scene": "Classical dark oil painting of turbulent cavalry battle in golden-brown chiaroscuro mist, dramatic clouds, museum canvas texture",
-        "caption_story": "The loudest man in the room is always the easiest to read. When you refuse to broadcast your anger, your plans, or your insecurities, nobody can find a handle to pull you off balance.",
+        "bg_scene": "Classical dark oil painting of misty mountain peaks and ancient stone watchtower at twilight, museum canvas texture",
+        "caption_story": "The loudest person in the room is always the easiest to read. When you refuse to broadcast your anger, your plans, or your insecurities, nobody can find a handle to pull you off balance.",
         "tags": "#Stoicism #EmotionalMastery #SelfControl #Mindset #LifeLessons"
     },
+    # 2. MINIMAL_TYPO (Modern Finance + Selective Highlight)
     {
-        "id": "IMG_SILENT_EXIT",
-        "pillar": "SOVEREIGNTY",
-        "category": "BOUNDARIES",
-        "headline": "NEVER ANNOUNCE YOUR DEPARTURE",
-        "quote": "\"Withdraw your presence without spectacle. Explaining your worth to those who ignored it only prolongs your own captivity.\"",
-        "author": "ANCIENT MAXIM",
-        "reflection_prompt": "WHAT BOUNDARY TOOK YOU THE LONGEST TO ENFORCE IN LIFE?",
-        "sub_prompt": "THOUGHTFUL REPLIES BUILD REAL PERSPECTIVE",
-        "bg_scene": "Moody dark painting of a lone cloaked traveler walking across an ancient stone bridge into thick twilight fog, deep slate and gold tones",
-        "caption_story": "Arguing for respect is a battle you have already lost. Mature strength does not slam doors or write long explanations—it simply closes the gate and redirects its energy where it is honored.",
-        "tags": "#SelfRespect #Boundaries #StoicWisdom #Maturity #PersonalGrowth"
-    },
-    {
-        "id": "IMG_TWO_ARROWS",
-        "pillar": "SOVEREIGNTY",
-        "category": "COMPOSURE",
-        "headline": "DROP THE SECOND ARROW",
-        "quote": "\"The first wound is struck by fate; the second is driven into your chest by your own refusal to let go.\"",
-        "author": "ANCIENT PARABLE",
-        "reflection_prompt": "HOW DO YOU STOP REPLAYING AN INSULT OR SETBACK IN YOUR MIND?",
-        "sub_prompt": "SAVE THIS REMINDER FOR DIFFICULT DAYS",
-        "bg_scene": "Dramatic classical chiaroscuro oil painting of a weathered bronze shield resting beside a stone archway under storm clouds",
-        "caption_story": "Someone speaks carelessly, or a plan falls apart—that is the first arrow, and it is out of your hands. Replaying the moment for three sleepless nights is the second arrow, fired entirely by your own mind.",
-        "tags": "#EmotionalIntelligence #Stoicism #MentalStrength #PeaceOfMind #Wisdom"
-    },
-
-    # PILLAR 2: FINANCIAL SOVEREIGNTY & CONTROL
-    {
-        "id": "IMG_SAVING_IS_CONTROL",
+        "id": "IMG_MONEY_TRUTH_MINIMAL",
         "pillar": "FINANCE",
-        "category": "FINANCIAL SOVEREIGNTY",
-        "headline": "SAVING IS NOT FEAR. IT IS CONTROL.",
-        "quote": "\"He who buys what he does not need will soon be forced to sell what he cannot afford to lose.\"",
-        "author": "CATO THE ELDER",
-        "reflection_prompt": "WHAT FINANCIAL LESSON DO YOU WISH YOU HAD LEARNED AT 25?",
-        "sub_prompt": "SHARE ONE RULE THAT CHANGED YOUR FINANCES",
-        "bg_scene": "Dark moody Renaissance still-life painting of a heavy iron-bound wooden chest, brass balance scale, and single beeswax candle on oak table",
-        "caption_story": "Living to impress neighbors who do not pay your bills is quiet slavery. Every dollar you refuse to waste on empty status buys you the freedom to walk away from toxic jobs, bad deals, and disrespectful rooms.",
-        "tags": "#FinancialWisdom #Discipline #Stoicism #WealthMindset #SelfReliance"
-    },
-    {
-        "id": "IMG_SILENT_WEALTH",
-        "pillar": "FINANCE",
-        "category": "RESOURCE DISCIPLINE",
-        "headline": "QUIET WEALTH BUYS FREEDOM",
-        "quote": "\"True fortune is not measured by the luxuries you display, but by the emergencies that can no longer break your peace.\"",
-        "author": "SENECA",
-        "reflection_prompt": "DOES TRUE WEALTH MEAN MORE POSSESSIONS OR FEWER OBLIGATIONS?",
-        "sub_prompt": "SHARE YOUR PERSPECTIVE BELOW",
-        "bg_scene": "Atmospheric classical oil painting of an ancient stone harbor at dawn with a sturdy timber ship anchored in calm golden mist",
-        "caption_story": "You do not feel the consequences of reckless spending on a sunny afternoon—you feel them when life tests your household. Build your reserve in silence while others perform for applause.",
-        "tags": "#MoneyMindset #FinancialFreedom #StoicPhilosophy #LifeLessons #Discipline"
-    },
-
-    # PILLAR 3: FATHER TO SON / INTERGENERATIONAL LEGACY
-    {
-        "id": "IMG_FATHER_TO_SON_CRAFT",
-        "pillar": "LEGACY",
-        "category": "LEGACY COUNSEL",
-        "headline": "SON, BUILD WHAT NO ONE CAN TAKE",
-        "quote": "\"Luck fades with the weather, but character, skill, and self-command remain yours when every title is stripped away.\"",
-        "author": "FATHER'S COUNSEL",
-        "reflection_prompt": "WHAT IS THE SINGLE BEST PIECE OF ADVICE YOUR FATHER OR MENTOR GAVE YOU?",
-        "sub_prompt": "SHARE IT FOR THE NEXT GENERATION",
-        "bg_scene": "Warm Rembrandt-style oil painting of an elder master craftsman guiding a young apprentice over wooden drafting plans by lantern light",
-        "caption_story": "If you want to build a life that endures, stop chasing shortcuts. Invest your twenties and thirties in mastering a real craft, keeping your word, and controlling your temper—those assets compound for decades.",
-        "tags": "#FatherAndSon #Legacy #LifeAdvice #MenOfCharacter #Stoicism"
-    },
-    {
-        "id": "IMG_CHOOSE_YOUR_CIRCLE",
-        "pillar": "LEGACY",
-        "category": "MENTORSHIP",
-        "headline": "GUARD THE COMPANY YOU KEEP",
-        "quote": "\"Associate with those who make you better, and welcome those whom you can elevate; for iron sharpens iron in silence.\"",
-        "author": "SENECA",
-        "reflection_prompt": "HOW DO YOU RECOGNIZE A TRULY LOYAL FRIEND AFTER YEARS OF EXPERIENCE?",
-        "sub_prompt": "TAG OR SHARE WITH SOMEONE YOU TRUST",
-        "bg_scene": "Classical dark oil painting of two armored Roman commanders standing beside a stone watchtower overlooking misty mountain ridges",
-        "caption_story": "A man's trajectory is quietly shaped by the five voices he tolerates closest to his table. Step back from chronic complainers and surround yourself with people who respect duty, family, and honest labor.",
-        "tags": "#Brotherhood #Loyalty #Wisdom #LifeLessons #PersonalGrowth"
-    },
-
-    # PILLAR 4: LONGEVITY, HEALTH & DIGNITY AFTER 40/60
-    {
-        "id": "IMG_STRENGTH_IN_LATER_YEARS",
-        "pillar": "LONGEVITY",
-        "category": "AGING WELL",
-        "headline": "PROTECT YOUR STRENGTH FOR LATER YEARS",
-        "quote": "\"It is a disgrace to grow old through sheer carelessness before seeing what manner of man you might become by training body and mind.\"",
-        "author": "SOCRATES",
-        "reflection_prompt": "WHICH DAILY HABIT HAS PROTECTED YOUR HEALTH AND ENERGY THE MOST?",
-        "sub_prompt": "SHARE A HABIT WORTH KEEPING AFTER 40",
-        "bg_scene": "Dramatic classical painting of a weathered elder standing tall on a sunlit alpine granite ridge at sunrise, deep atmospheric mist",
-        "caption_story": "Your later years deserve strength, clarity, and independence—not regret. Daily walking, simple whole food, deep sleep, and refusing to carry bitter grudges will add life to your years.",
-        "tags": "#HealthyAging #Longevity #MensHealth #StoicDiscipline #Vitality"
-    },
-    {
-        "id": "IMG_GUARD_YOUR_PEACE_60",
-        "pillar": "LONGEVITY",
-        "category": "LONGEVITY & PEACE",
-        "headline": "GUARD YOUR PEACE AS YOU AGE",
-        "quote": "\"Nothing ages a man faster than carrying resentment for people who have already forgotten his name.\"",
-        "author": "MARCUS AURELIUS",
-        "reflection_prompt": "WHAT HAVE YOU LEARNED TO STOP WORRYING ABOUT AS YOU GOT OLDER?",
-        "sub_prompt": "YOUR WISDOM HELPS YOUNGER READERS",
-        "bg_scene": "Serene dark oil painting of an ancient olive grove beside a quiet stone villa under golden evening light",
-        "caption_story": "After forty, energy becomes your most valuable currency. Stop spending it on pointless online debates, ungrateful relatives, or proving yourself to strangers. Guard your quiet mornings and your evening peace.",
-        "tags": "#LifeAfter40 #PeaceOfMind #AgingGracefully #MarcusAurelius #Wisdom"
-    },
-
-    # PILLAR 5: ANCIENT PARABLES & HUMAN NATURE
-    {
-        "id": "IMG_ROOTS_MAKE_NO_NOISE",
-        "pillar": "PARABLES",
-        "category": "ANCIENT PARABLE",
-        "headline": "THE NOISE IS NOT THE PROOF",
-        "quote": "\"A falling tree crashes with thunder, yet an entire forest grows in total silence. Build your roots where no eye can see.\"",
-        "author": "ANCIENT PROVERB",
-        "reflection_prompt": "WHAT ARE YOU QUIETLY BUILDING RIGHT NOW WITHOUT ANNOUNCING IT?",
-        "sub_prompt": "SAVE THIS IF YOU ARE IN A SEASON OF QUIET WORK",
-        "bg_scene": "Moody atmospheric painting of ancient gnarled oak roots gripping mossy granite boulders in a misty deep forest",
-        "caption_story": "Applause is cheap and temporary. Real transformation happens in the quiet hours when nobody is watching—when you keep your promises to yourself, refine your discipline, and let finished results speak.",
-        "tags": "#WorkInSilence #Patience #StoicMindset #Discipline #Growth"
-    },
-    {
-        "id": "IMG_GOOD_BAD_WORST_PEOPLE",
-        "pillar": "PARABLES",
-        "category": "HUMAN NATURE",
-        "headline": "NEVER BLAME PEOPLE IN YOUR LIFE",
-        "quote": "\"Good people bring happiness, difficult people bring experience, and the worst people leave lessons that sharpen your discernment forever.\"",
-        "author": "TIMELESS LAW",
-        "reflection_prompt": "DID YOUR BIGGEST GROWTH COME FROM AN EASY SEASON OR A HARD LESSON?",
+        "format_style": "MINIMAL_TYPO",
+        "palette": "IMPERIAL_GOLD",
+        "category": "MONEY REALITY",
+        "headline": "Hard truth about money:",
+        "quote": "Nobody pays your bills out of sympathy. Nobody funds your dreams out of obligation. Nobody protects your future better than you.",
+        "author": "BENJAMIN FRANKLIN INSIGHT",
+        "accent_word": "protects",
+        "reflection_prompt": "WHAT IS ONE MONEY HABIT THAT GAVE YOU PEACE OF MIND?",
         "sub_prompt": "SHARE YOUR PERSPECTIVE IN THE COMMENTS",
-        "bg_scene": "Classical chiaroscuro oil painting of a stone compass and weathered parchment map illuminated by warm amber light",
-        "caption_story": "Every person who crosses your path serves a purpose. Instead of growing bitter over betrayal, extract the lesson, tighten your standards, and move forward wiser than before.",
-        "tags": "#HumanNature #LifeLessons #Discernment #Wisdom #Mindset"
+        "bg_scene": "Clean minimal obsidian charcoal background with subtle warm radial rim light, editorial poster style",
+        "caption_story": "Sympathy never covers a mortgage, and obligation never builds security. Taking full ownership of your habits and savings is the quietest form of independence.",
+        "tags": "#MoneyMindset #FinancialFreedom #Discipline #Stoicism #LifeLessons"
+    },
+    # 3. HIGHLIGHT_STORY (Modern Everyday Realism + Marker Highlight)
+    {
+        "id": "IMG_MODERN_REBUILD_STORY",
+        "pillar": "FINANCE",
+        "format_style": "HIGHLIGHT_STORY",
+        "palette": "EMERALD_BONE",
+        "category": "MODERN REALITY",
+        "headline": "Nobody talks about this:",
+        "quote": "\"The quietest years of your life—when you skip applause, cut waste, and fix your habits in private—are the exact years that buy your freedom.\"",
+        "author": "MODERN REFLECTION",
+        "accent_word": "freedom",
+        "reflection_prompt": "WHAT ARE YOU REBUILDING QUIETLY BEHIND CLOSED DOORS RIGHT NOW?",
+        "sub_prompt": "SHARE YOUR THOUGHTS BELOW",
+        "bg_scene": "Modern sunlit city apartment window at dawn with a warm cup of coffee and clean notebook on an oak desk, realistic photography",
+        "caption_story": "Most growth happens far away from social media—in early mornings, skipped status purchases, and quiet consistency. Keep showing up even while the scoreboard looks still.",
+        "tags": "#Mindset #Discipline #LifeAfter40 #PersonalGrowth #Wisdom"
+    },
+    # 4. SYMBOLIC_PORTRAIT (Leader Wisdom + Classic Portrait)
+    {
+        "id": "IMG_LINCOLN_SHARPEN_AXE",
+        "pillar": "LEGACY",
+        "format_style": "SYMBOLIC_PORTRAIT",
+        "palette": "CRIMSON_IVORY",
+        "category": "LEADER WISDOM",
+        "headline": "Give me six hours to chop down a tree and I will spend the first four sharpening the axe.",
+        "quote": "Preparation beats last-minute panic every single time.",
+        "author": "ABRAHAM LINCOLN",
+        "accent_word": "sharpening",
+        "reflection_prompt": "WHERE HAS EXTRA PREPARATION SAVED YOU FROM UNNECESSARY STRESS?",
+        "sub_prompt": "SHARE YOUR EXPERIENCE IN THE COMMENTS",
+        "bg_scene": "Warm parchment studio portrait of a thoughtful nineteenth-century statesman with weathered features and calm resolve, classic engraving style",
+        "caption_story": "Rushing into hard decisions without preparation creates avoidable mistakes. Four hours of quiet planning can save four months of cleanup.",
+        "tags": "#AbrahamLincoln #Leadership #Preparation #Wisdom #LifeLessons"
+    },
+    # 5. SYMBOL_SANDWICH (Sacred Geometry + Provoking Question)
+    {
+        "id": "IMG_FRANKL_SPACE_BETWEEN",
+        "pillar": "SOVEREIGNTY",
+        "format_style": "SYMBOL_SANDWICH",
+        "palette": "GLACIAL_ICE",
+        "category": "INNER FREEDOM",
+        "headline": "BETWEEN PROVOCATION AND REACTION LIES YOUR ONLY REAL FREEDOM.",
+        "quote": "Lose your temper, and a stranger becomes your master.",
+        "author": "VIKTOR FRANKL • MODERN PSYCHOLOGY",
+        "accent_word": "FREEDOM",
+        "reflection_prompt": "HOW DO YOU STOP YOURSELF FROM REACTING IN THE HEAT OF THE MOMENT?",
+        "sub_prompt": "SHARE YOUR PERSPECTIVE BELOW",
+        "bg_scene": "Dark obsidian slate background with sacred geometric star and compass lines",
+        "caption_story": "Viktor Frankl proved that even under extreme pressure, a human being still owns the space between what happens and how they respond. Guard that space fiercely.",
+        "tags": "#ViktorFrankl #SelfControl #EmotionalIntelligence #Mindset #Stoicism"
+    },
+    # 6. BATTLEFIELD_VOW (Dramatic Scene + Single Accent Word)
+    {
+        "id": "IMG_ROOSEVELT_ARENA_VOW",
+        "pillar": "SOVEREIGNTY",
+        "format_style": "BATTLEFIELD_VOW",
+        "palette": "FORGE_AMBER",
+        "category": "IN THE ARENA",
+        "headline": "Ignore the critics. Stay in the arena.",
+        "quote": "People who build nothing always have plenty of advice.",
+        "author": "THEODORE ROOSEVELT",
+        "accent_word": "arena.",
+        "reflection_prompt": "HOW DO YOU TUNE OUT CRITICS WHO HAVEN'T WALKED IN YOUR SHOES?",
+        "sub_prompt": "SHARE YOUR THOUGHTS BELOW",
+        "bg_scene": "Dramatic cinematic scene of a lone weathered contender standing under moody storm clouds and golden sunbeams, epic lighting",
+        "caption_story": "It is easy to judge from the bleachers when nothing is on the line. Keep your eyes on the work in front of you and let results answer the noise.",
+        "tags": "#TheodoreRoosevelt #Resilience #Discipline #Mindset #Courage"
+    },
+    # 7. NUMBERED_CHECKLIST (5-Point High-Save List)
+    {
+        "id": "IMG_FIVE_SILENT_RULES",
+        "pillar": "PARABLES",
+        "format_style": "NUMBERED_CHECKLIST",
+        "palette": "IMPERIAL_GOLD",
+        "category": "DAILY CODE",
+        "headline": "5 PLACES TO STAY SILENT AT ALL COSTS:",
+        "quote": "1. When anger wants the first word. | 2. When you do not know the full facts. | 3. When someone baits you into a pointless fight. | 4. When your private plans are still unfinished. | 5. When actions will prove it better.",
+        "author": "ANCIENT & MODERN CODE",
+        "accent_word": "SILENT",
+        "reflection_prompt": "WHICH OF THESE FIVE MOMENTS IS HARDEST FOR YOU TO HOLD SILENCE?",
+        "sub_prompt": "SAVE THIS LIST FOR TOUGH CONVERSATIONS",
+        "bg_scene": "Deep dark slate textured background with subtle architectural shadows",
+        "caption_story": "Silence is not weakness when you hold composure—it is leverage. A single measured pause can protect a relationship, a career move, or your peace of mind.",
+        "tags": "#SelfControl #Boundaries #Communication #Stoicism #LifeLessons"
+    },
+    # 8. MODERN_CONTRAST (Ancient Principle vs. Modern Trap)
+    {
+        "id": "IMG_MANDELA_POISON_CONTRAST",
+        "pillar": "LONGEVITY",
+        "format_style": "MODERN_CONTRAST",
+        "palette": "ROYAL_VIOLET",
+        "category": "PEACE AFTER 40",
+        "headline": "RESENTMENT VS. FREEDOM",
+        "quote": "HOLDING BITTERNESS: Drinking poison while hoping your enemy suffers. | LETTING IT GO: Reclaiming your sleep, health, and peace after forty.",
+        "author": "NELSON MANDELA WISDOM",
+        "accent_word": "FREEDOM",
+        "reflection_prompt": "WHAT OLD GRUDGE OR WORRY ARE YOU GLAD YOU FINALLY LEFT BEHIND?",
+        "sub_prompt": "YOUR EXPERIENCE HELPS OTHERS GROW",
+        "bg_scene": "Moody modern dusk skyline reflected in still dark water",
+        "caption_story": "Nelson Mandela warned that holding onto resentment poisons the person carrying it while the other person sleeps peacefully. Forgive for your own freedom.",
+        "tags": "#NelsonMandela #PeaceOfMind #LifeAfter40 #EmotionalHealth #Wisdom"
+    },
+    # 9. MODERN EVERYDAY + BRUCE LEE ADAPTABILITY
+    {
+        "id": "IMG_BRUCE_LEE_BAMBOO",
+        "pillar": "PARABLES",
+        "format_style": "HIGHLIGHT_STORY",
+        "palette": "EMERALD_BONE",
+        "category": "ADAPTABILITY",
+        "headline": "A lesson from Bruce Lee:",
+        "quote": "\"Notice that the stiffest tree is most easily cracked, while the bamboo survives by bending with the wind.\"",
+        "author": "BRUCE LEE",
+        "accent_word": "bending",
+        "reflection_prompt": "WHEN DID ADAPTING YOUR PLAN WORK BETTER THAN FORCING IT?",
+        "sub_prompt": "SHARE YOUR STORY IN THE COMMENTS",
+        "bg_scene": "Sunlit modern bamboo grove beside a calm stone walkway in morning mist, crisp natural photography",
+        "caption_story": "Rigid pride snaps when life throws an unexpected curveball. Stay anchored in your core principles while staying flexible in your strategy.",
+        "tags": "#BruceLee #Adaptability #Mindset #Resilience #Wisdom"
+    },
+    # 10. MODERN FINANCE + CHARLIE MUNGER
+    {
+        "id": "IMG_MUNGER_AVOID_STUPIDITY",
+        "pillar": "FINANCE",
+        "format_style": "MINIMAL_TYPO",
+        "palette": "GLACIAL_ICE",
+        "category": "COMPOUNDING EDGE",
+        "headline": "Charlie Munger's quiet edge:",
+        "quote": "You do not need to be brilliant every day. You build massive long-term advantage simply by consistently avoiding foolish mistakes.",
+        "author": "CHARLIE MUNGER",
+        "accent_word": "avoiding",
+        "reflection_prompt": "WHAT IS ONE MISTAKE YOU AVOIDED THAT PAID OFF YEARS LATER?",
+        "sub_prompt": "SHARE YOUR PERSPECTIVE IN THE COMMENTS",
+        "bg_scene": "Clean minimal obsidian dark background with cool cyan ambient glow",
+        "caption_story": "Most financial and personal setbacks come from unforced errors—impulse debt, toxic partnerships, and impatience. Protect your downside first.",
+        "tags": "#CharlieMunger #FinancialWisdom #Discipline #Mindset #InvestingInSelf"
+    },
+    # 11. CHISELED HERO + MUSASHI TIMING
+    {
+        "id": "IMG_MUSASHI_RHYTHM",
+        "pillar": "LEGACY",
+        "format_style": "CHISELED_HERO",
+        "palette": "FORGE_AMBER",
+        "category": "MASTERY & TIMING",
+        "headline": "MASTER ONE THING DEEPLY",
+        "quote": "\"From one thing, know ten thousand things. Do nothing that is of no use.\"",
+        "author": "MIYAMOTO MUSASHI • FEUDAL JAPAN",
+        "accent_word": "MASTER",
+        "reflection_prompt": "WHAT ONE SKILL HAS PAID YOU BACK ACROSS EVERY STAGE OF LIFE?",
+        "sub_prompt": "SHARE YOUR CRAFT IN THE COMMENTS",
+        "bg_scene": "Atmospheric painting of a traditional Japanese wooden dojo at dawn with soft golden sunbeams through shoji screens",
+        "caption_story": "Dabbling in ten directions produces shallow results. Going deep on one craft builds the discipline that transfers to everything else you touch.",
+        "tags": "#MiyamotoMusashi #Mastery #Discipline #Legacy #PersonalGrowth"
+    },
+    # 12. SYMBOLIC PORTRAIT + CARL JUNG SHADOW
+    {
+        "id": "IMG_JUNG_UNCONSCIOUS",
+        "pillar": "SOVEREIGNTY",
+        "format_style": "SYMBOLIC_PORTRAIT",
+        "palette": "ROYAL_VIOLET",
+        "category": "SELF-AWARENESS",
+        "headline": "Until you make the unconscious conscious, it will direct your life and you will call it fate.",
+        "quote": "Examine your habits before blaming your circumstances.",
+        "author": "CARL JUNG",
+        "accent_word": "conscious",
+        "reflection_prompt": "WHAT PATTERN DID YOU FINALLY NOTICE AND CHANGE IN YOURSELF?",
+        "sub_prompt": "SHARE YOUR REFLECTION BELOW",
+        "bg_scene": "Warm parchment classic studio portrait of a thoughtful European psychologist in tweed suit with glasses and calm analytical gaze",
+        "caption_story": "Repeating the same relationship or financial mistakes is rarely bad luck. Honest self-observation breaks cycles that willpower alone cannot.",
+        "tags": "#CarlJung #Psychology #SelfAwareness #Mindset #Growth"
     }
 ]
 
 # ---------------------------------------------------------
-# 4. PROCEDURAL & CURATED DARK BACKGROUND ENGINE
+# 4. PROCEDURAL & CURATED BACKGROUND ENGINE
 # ---------------------------------------------------------
 def create_atmospheric_canvas(width=1080, height=1350, seed_str="default", tone="GOLD"):
     rng = random.Random(seed_str)
@@ -443,7 +595,7 @@ def create_atmospheric_canvas(width=1080, height=1350, seed_str="default", tone=
         b = int(cols[0][2] * (1 - ratio) + cols[2][2] * ratio)
         draw.line([(0, y), (width, y)], fill=(r, g, b))
 
-    for _ in range(18):
+    for _ in range(20):
         cx = rng.randint(-100, width + 100)
         cy = rng.randint(100, height - 100)
         rx = rng.randint(180, 480)
@@ -467,7 +619,7 @@ def crop_and_prep_background(pil_img, bottom_crop_pct=0.06, darken_factor=0.52):
         im = im.crop((0, 0, w, max(100, new_h)))
         w, h = im.size
 
-    target_ratio = 1080.0 / 1350.0  # 4:5 Feed Portrait
+    target_ratio = 1080.0 / 1350.0
     curr_ratio = w / float(h)
     if curr_ratio > target_ratio:
         crop_w = int(h * target_ratio)
@@ -484,7 +636,7 @@ def crop_and_prep_background(pil_img, bottom_crop_pct=0.06, darken_factor=0.52):
     return im
 
 # ---------------------------------------------------------
-# 5. CHISELED 4:5 FEED CARD COMPOSITOR
+# 5. GEOMETRIC ORNAMENTS & 8-FORMAT 4:5 FEED COMPOSITOR
 # ---------------------------------------------------------
 def wrap_text_lines(draw, text, font, max_width):
     words = text.split()
@@ -501,13 +653,27 @@ def wrap_text_lines(draw, text, font, max_width):
         lines.append(" ".join(curr))
     return lines
 
+def draw_corner_brackets(draw, W, H, color_rgba, margin=44, arm=42, width=3):
+    draw.line([(margin, margin), (margin + arm, margin)], fill=color_rgba, width=width)
+    draw.line([(margin, margin), (margin, margin + arm)], fill=color_rgba, width=width)
+    draw.line([(W - margin - arm, margin), (W - margin, margin)], fill=color_rgba, width=width)
+    draw.line([(W - margin, margin), (W - margin, margin + arm)], fill=color_rgba, width=width)
+    draw.line([(margin, H - margin), (margin + arm, H - margin)], fill=color_rgba, width=width)
+    draw.line([(margin, H - margin - arm), (margin, H - margin)], fill=color_rgba, width=width)
+    draw.line([(W - margin - arm, H - margin), (W - margin, H - margin)], fill=color_rgba, width=width)
+    draw.line([(W - margin, H - margin - arm), (W - margin, H - margin)], fill=color_rgba, width=width)
+
+def draw_diamond_divider(draw, cx, cy, color_rgba, span=170):
+    draw.line([(cx - span, cy), (cx - 18, cy)], fill=color_rgba, width=2)
+    draw.line([(cx + 18, cy), (cx + span, cy)], fill=color_rgba, width=2)
+    draw.polygon([(cx, cy - 9), (cx + 9, cy), (cx, cy + 9), (cx - 9, cy)], fill=color_rgba)
+
 def render_4x5_master_card(bg_image, card_data, accent_theme="IMPERIAL_GOLD"):
     W, H = 1080, 1350
     canvas = bg_image.copy().convert("RGBA")
     overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     odraw = ImageDraw.Draw(overlay)
 
-    # Top & bottom vignette gradients for crisp legibility
     for y in range(260):
         a = int(155 * (1 - y / 260.0))
         odraw.line([(0, y), (W, y)], fill=(6, 8, 12, a))
@@ -515,73 +681,63 @@ def render_4x5_master_card(bg_image, card_data, accent_theme="IMPERIAL_GOLD"):
         a = int(215 * ((y - (H - 360)) / 360.0))
         odraw.line([(0, y), (W, y)], fill=(6, 8, 12, a))
 
-    # Bottom reflection banner strip (non-bait discussion bar)
     strip_top = H - 175
     odraw.rectangle([(0, strip_top), (W, H)], fill=(8, 11, 17, 235))
 
-    accent_map = {
-        "IMPERIAL_GOLD": (235, 192, 96, 255),
-        "GLACIAL_ICE":   (110, 225, 245, 255),
-        "FORGE_AMBER":   (245, 162, 72, 255),
-    }
-    gold = accent_map.get(accent_theme, accent_map["IMPERIAL_GOLD"])
+    pal = ACCENT_PALETTES.get(accent_theme, ACCENT_PALETTES["IMPERIAL_GOLD"])
+    gold = pal["primary"]
     white = (248, 250, 252, 255)
     soft_gray = (203, 213, 225, 255)
 
-    odraw.line([(0, strip_top), (W, strip_top)], fill=(gold[0], gold[1], gold[2], 140), width=2)
+    odraw.line([(0, strip_top), (W, strip_top)], fill=(gold[0], gold[1], gold[2], 150), width=2)
     canvas = Image.alpha_composite(canvas, overlay)
     draw = ImageDraw.Draw(canvas)
 
+    draw_corner_brackets(draw, W, strip_top, (gold[0], gold[1], gold[2], 165), margin=38, arm=46, width=3)
+
     f_brand = load_font(REG_FONT_PATH, 20)
     f_cat = load_font(BOLD_FONT_PATH, 22)
-    f_head = load_font(BOLD_FONT_PATH, 68)
-    f_quote = load_font(SERIF_FONT_PATH, 34)
-    f_auth = load_font(REG_FONT_PATH, 22)
+    f_head = load_font(BOLD_FONT_PATH, 66)
+    f_quote = load_font(SERIF_FONT_PATH, 33)
+    f_auth = load_font(BOLD_FONT_PATH, 21)
     f_ref_q = load_font(REG_FONT_PATH, 20)
     f_ref_sub = load_font(BOLD_FONT_PATH, 22)
 
-    # 1. Top Brand Header
     brand_txt = "E C H O E S   O F   W I S D O M"
     bw = draw.textbbox((0, 0), brand_txt, font=f_brand)[2]
-    draw.text(((W - bw) // 2, 72), brand_txt, font=f_brand, fill=gold)
-    draw.line([((W - bw) // 2, 106), ((W + bw) // 2, 106)], fill=(gold[0], gold[1], gold[2], 130), width=1)
+    draw.text(((W - bw) // 2, 68), brand_txt, font=f_brand, fill=gold)
+    draw.line([((W - bw) // 2, 102), ((W + bw) // 2, 102)], fill=(gold[0], gold[1], gold[2], 130), width=1)
 
-    # 2. Category Pill with Flanking Gold Rules
     cat_txt = card_data.get("category", "SOVEREIGNTY").upper()
     cw = draw.textbbox((0, 0), cat_txt, font=f_cat)[2]
     cx = (W - cw) // 2
-    cy = 188
+    cy = 180
+    draw.rounded_rectangle([(cx - 24, cy - 8), (cx + cw + 24, cy + 36)], radius=16, outline=gold, width=2)
     draw.text((cx, cy), cat_txt, font=f_cat, fill=gold)
-    draw.line([(cx - 58, cy + 14), (cx - 16, cy + 14)], fill=gold, width=3)
-    draw.line([(cx + cw + 16, cy + 14), (cx + cw + 58, cy + 14)], fill=gold, width=3)
 
-    # 3. Dual-Pass Chiseled Relief Headline
-    head_lines = wrap_text_lines(draw, card_data.get("headline", "").upper(), f_head, 880)
-    curr_y = 295 if len(head_lines) >= 3 else 335
+    head_lines = wrap_text_lines(draw, card_data.get("headline", "").upper(), f_head, 860)
+    curr_y = 285 if len(head_lines) >= 3 else 325
     for line in head_lines[:4]:
         lw = draw.textbbox((0, 0), line, font=f_head)[2]
         lx = (W - lw) // 2
         draw.text((lx + 4, curr_y + 5), line, font=f_head, fill=(0, 0, 0, 210))
         draw.text((lx - 1, curr_y - 1), line, font=f_head, fill=(255, 255, 255, 90))
         draw.text((lx, curr_y), line, font=f_head, fill=white)
-        curr_y += 84
+        curr_y += 82
 
-    # 4. Center Accent Divider
     curr_y += 18
-    draw.line([(W // 2 - 140, curr_y), (W // 2 + 140, curr_y)], fill=gold, width=3)
-    curr_y += 38
+    draw_diamond_divider(draw, W // 2, curr_y, gold, span=160)
+    curr_y += 36
 
-    # 5. Parable / Insight Body Text
-    quote_lines = wrap_text_lines(draw, card_data.get("quote", ""), f_quote, 860)
+    quote_lines = wrap_text_lines(draw, card_data.get("quote", ""), f_quote, 850)
     for qline in quote_lines[:5]:
         qw = draw.textbbox((0, 0), qline, font=f_quote)[2]
         qx = (W - qw) // 2
         draw.text((qx + 2, curr_y + 3), qline, font=f_quote, fill=(0, 0, 0, 210))
         draw.text((qx, curr_y), qline, font=f_quote, fill=white)
-        curr_y += 48
+        curr_y += 46
 
-    # 6. Attribution
-    curr_y += 26
+    curr_y += 24
     auth_txt = card_data.get("author", "ANCIENT MAXIM").upper()
     aw = draw.textbbox((0, 0), auth_txt, font=f_auth)[2]
     ax = (W - aw) // 2
@@ -589,7 +745,6 @@ def render_4x5_master_card(bg_image, card_data, accent_theme="IMPERIAL_GOLD"):
     draw.line([(ax - 44, curr_y + 13), (ax - 14, curr_y + 13)], fill=gold, width=2)
     draw.line([(ax + aw + 14, curr_y + 13), (ax + aw + 44, curr_y + 13)], fill=gold, width=2)
 
-    # 7. Bottom Non-Bait Reflection Strip
     rq_txt = card_data.get("reflection_prompt", "WHAT IS ONE LESSON LIFE TAUGHT YOU THE HARD WAY?").upper()
     rq_lines = wrap_text_lines(draw, rq_txt, f_ref_q, 980)
     ry = strip_top + 28
@@ -604,10 +759,302 @@ def render_4x5_master_card(bg_image, card_data, accent_theme="IMPERIAL_GOLD"):
 
     return canvas.convert("RGB")
 
+def render_feed_card_by_format(bg_image, card_data, accent_theme="IMPERIAL_GOLD", format_style="CHISELED_HERO"):
+    if format_style == "CHISELED_HERO":
+        return render_4x5_master_card(bg_image, card_data, accent_theme=accent_theme)
+
+    W, H = 1080, 1350
+    pal = ACCENT_PALETTES.get(accent_theme, ACCENT_PALETTES["IMPERIAL_GOLD"])
+    accent_rgba = pal["primary"]
+    hl_rgba = pal["secondary"]
+
+    if format_style == "MINIMAL_TYPO":
+        canvas = Image.new("RGBA", (W, H), (8, 10, 15, 255))
+        draw = ImageDraw.Draw(canvas)
+        draw_corner_brackets(draw, W, H, accent_rgba, margin=54, arm=52, width=3)
+        f_lead = load_font(SERIF_FONT_PATH, 42)
+        f_body = load_font(SERIF_FONT_PATH, 46)
+        f_auth = load_font(BOLD_FONT_PATH, 24)
+        f_foot = load_font(REG_FONT_PATH, 22)
+
+        draw.rectangle([(96, 195), (104, 260)], fill=accent_rgba)
+        lead_txt = card_data.get("headline", "Hard truth about money:")
+        lead_lines = wrap_text_lines(draw, lead_txt, f_lead, 840)
+        y = 195
+        for line in lead_lines[:2]:
+            draw.text((124, y), line, font=f_lead, fill=accent_rgba)
+            y += 56
+
+        y += 34
+        body_txt = card_data.get("quote", "").strip('"')
+        body_lines = wrap_text_lines(draw, body_txt, f_body, 860)
+        custom_acc = re.sub(r"[^a-zA-Z]", "", card_data.get("accent_word", "")).lower()
+        highlight_words = {"pays", "funds", "protects", "truth", "strength", "peace", "freedom", "clarity", "character", "avoiding", "value", custom_acc}
+        for line in body_lines[:8]:
+            x = 100
+            for w in line.split():
+                clean_w = re.sub(r"[^a-zA-Z]", "", w).lower()
+                col = accent_rgba if (clean_w and clean_w in highlight_words) else (248, 250, 252, 255)
+                draw.text((x, y), w, font=f_body, fill=col)
+                x = draw.textbbox((x, y), w + " ", font=f_body)[2]
+            y += 64
+
+        y += 28
+        draw.line([(100, y), (340, y)], fill=accent_rgba, width=3)
+        draw.text((100, y + 20), f"— {card_data.get('author', 'ECHOES OF WISDOM').upper()}", font=f_auth, fill=accent_rgba)
+
+        handle_txt = get_persistent_handle()
+        hw = draw.textbbox((0, 0), handle_txt, font=f_foot)[2]
+        draw.text(((W - hw) // 2, H - 105), handle_txt, font=f_foot, fill=(148, 163, 184, 255))
+        return canvas.convert("RGB")
+
+    if format_style == "HIGHLIGHT_STORY":
+        canvas = Image.new("RGBA", (W, H), (244, 241, 234, 255))
+        draw = ImageDraw.Draw(canvas)
+        f_top = load_font(BOLD_FONT_PATH, 36)
+        f_q = load_font(SERIF_FONT_PATH, 42)
+        f_auth = load_font(BOLD_FONT_PATH, 22)
+        f_handle = load_font(BOLD_FONT_PATH, 22)
+
+        top_head = card_data.get("headline", "I love this saying:")
+        th_box = draw.textbbox((0, 0), top_head, font=f_top)
+        hx = (W - (th_box[2] - th_box[0])) // 2
+        hy = 68
+        draw.rounded_rectangle([(hx - 18, hy - 6), (hx + (th_box[2] - th_box[0]) + 18, hy + (th_box[3] - th_box[1]) + 10)], radius=10, fill=hl_rgba)
+        draw.text((hx, hy), top_head, font=f_top, fill=(20, 24, 32, 255))
+
+        q_txt = card_data.get("quote", "")
+        q_lines = wrap_text_lines(draw, q_txt, f_q, 900)
+        qy = 148
+        for ql in q_lines[:6]:
+            qw = draw.textbbox((0, 0), ql, font=f_q)[2]
+            draw.text(((W - qw) // 2, qy), ql, font=f_q, fill=(17, 24, 39, 255))
+            qy += 54
+
+        auth_str = f"— {card_data.get('author', 'TIMELESS REFLECTION').upper()}"
+        aw = draw.textbbox((0, 0), auth_str, font=f_auth)[2]
+        draw.text(((W - aw) // 2, qy + 8), auth_str, font=f_auth, fill=(100, 116, 139, 255))
+
+        art_top = max(550, qy + 52)
+        art_im = bg_image.convert("RGB").resize((W, H - art_top), Image.Resampling.LANCZOS)
+        canvas.paste(art_im, (0, art_top))
+        draw.line([(0, art_top), (W, art_top)], fill=accent_rgba, width=5)
+
+        handle_txt = get_persistent_handle()
+        hw = draw.textbbox((0, 0), handle_txt, font=f_handle)[2]
+        draw.rounded_rectangle([((W - hw) // 2 - 20, H - 68), ((W + hw) // 2 + 20, H - 24)], radius=14, fill=(10, 14, 22, 215))
+        draw.text(((W - hw) // 2, H - 58), handle_txt, font=f_handle, fill=(248, 250, 252, 255))
+        return canvas.convert("RGB")
+
+    if format_style == "SYMBOLIC_PORTRAIT":
+        canvas = Image.new("RGBA", (W, H), (242, 232, 214, 255))
+        draw = ImageDraw.Draw(canvas)
+        draw_corner_brackets(draw, W, H, (145, 32, 26, 180), margin=34, arm=42, width=3)
+        f_main = load_font(SERIF_FONT_PATH, 50)
+        f_sub = load_font(ITALIC_FONT_PATH, 32)
+        f_auth = load_font(BOLD_FONT_PATH, 25)
+
+        crimson_ink = (145, 32, 26, 255)
+        charcoal_ink = (34, 34, 38, 255)
+
+        m_lines = wrap_text_lines(draw, card_data.get("headline", ""), f_main, 900)
+        y = 74
+        for ml in m_lines[:4]:
+            mw = draw.textbbox((0, 0), ml, font=f_main)[2]
+            draw.text(((W - mw) // 2, y), ml, font=f_main, fill=crimson_ink)
+            y += 62
+
+        s_lines = wrap_text_lines(draw, card_data.get("quote", "").strip('"'), f_sub, 860)
+        y += 12
+        for sl in s_lines[:3]:
+            sw = draw.textbbox((0, 0), sl, font=f_sub)[2]
+            draw.text(((W - sw) // 2, y), sl, font=f_sub, fill=charcoal_ink)
+            y += 42
+
+        y += 12
+        draw_diamond_divider(draw, W // 2, y, crimson_ink, span=140)
+        auth_txt = f"— {card_data.get('author', 'ANCIENT MAXIM').upper()}"
+        aw = draw.textbbox((0, 0), auth_txt, font=f_auth)[2]
+        draw.text(((W - aw) // 2, y + 18), auth_txt, font=f_auth, fill=charcoal_ink)
+
+        art_y = max(570, y + 66)
+        art_im = bg_image.convert("RGB").resize((W, H - art_y), Image.Resampling.LANCZOS)
+        canvas.paste(art_im, (0, art_y))
+        return canvas.convert("RGB")
+
+    if format_style == "SYMBOL_SANDWICH":
+        canvas = Image.new("RGBA", (W, H), (14, 15, 18, 255))
+        draw = ImageDraw.Draw(canvas)
+        f_mono = load_font(MONO_FONT_PATH, 40)
+        f_sub = load_font(SERIF_FONT_PATH, 31)
+        f_auth = load_font(BOLD_FONT_PATH, 22)
+        silver = (215, 222, 230, 255)
+
+        draw.polygon([(W // 2, 85), (W // 2 - 95, 235), (W // 2 + 95, 235)], outline=accent_rgba, width=5)
+        draw.polygon([(W // 2, 265), (W // 2 - 95, 115), (W // 2 + 95, 115)], outline=silver, width=4)
+        draw.ellipse([(W // 2 - 22, 153), (W // 2 + 22, 197)], outline=accent_rgba, width=4)
+
+        lines = wrap_text_lines(draw, card_data.get("headline", "").upper(), f_mono, 880)
+        y = 335
+        for ln in lines[:5]:
+            lw = draw.textbbox((0, 0), ln, font=f_mono)[2]
+            draw.text(((W - lw) // 2, y), ln, font=f_mono, fill=silver)
+            y += 56
+
+        q_lines = wrap_text_lines(draw, card_data.get("quote", "").strip('"'), f_sub, 860)
+        y += 28
+        for ql in q_lines[:3]:
+            qw = draw.textbbox((0, 0), ql, font=f_sub)[2]
+            draw.text(((W - qw) // 2, y), ql, font=f_sub, fill=accent_rgba)
+            y += 44
+
+        auth_str = f"— {card_data.get('author', 'TIMELESS LAW').upper()}"
+        aw = draw.textbbox((0, 0), auth_str, font=f_auth)[2]
+        draw.text(((W - aw) // 2, y + 22), auth_str, font=f_auth, fill=silver)
+
+        draw.arc([(W // 2 - 110, H - 215), (W // 2 + 110, H - 75)], start=180, end=360, fill=accent_rgba, width=5)
+        draw.line([(W // 2 - 150, H - 120), (W // 2 + 150, H - 120)], fill=silver, width=4)
+        draw.polygon([(W // 2, H - 145), (W // 2 + 12, H - 120), (W // 2, H - 95), (W // 2 - 12, H - 120)], fill=accent_rgba)
+        return canvas.convert("RGB")
+
+    if format_style == "NUMBERED_CHECKLIST":
+        canvas = bg_image.copy().convert("RGBA")
+        overlay = Image.new("RGBA", (W, H), (8, 11, 17, 215))
+        canvas = Image.alpha_composite(canvas, overlay)
+        draw = ImageDraw.Draw(canvas)
+        draw_corner_brackets(draw, W, H, accent_rgba, margin=42, arm=44, width=3)
+
+        f_head = load_font(BOLD_FONT_PATH, 46)
+        f_num = load_font(BOLD_FONT_PATH, 26)
+        f_item = load_font(REG_FONT_PATH, 29)
+        f_foot = load_font(BOLD_FONT_PATH, 22)
+
+        h_lines = wrap_text_lines(draw, card_data.get("headline", "5 RULES TO LIVE BY:").upper(), f_head, 900)
+        y = 105
+        for hl in h_lines[:2]:
+            draw.text((88, y), hl, font=f_head, fill=accent_rgba)
+            y += 58
+
+        draw.line([(88, y + 12), (992, y + 12)], fill=accent_rgba, width=3)
+        y += 46
+
+        raw_q = card_data.get("quote", "").strip('"')
+        parts = [p.strip() for p in re.split(r'\|\s*|\n+', raw_q) if p.strip()]
+        if len(parts) < 2:
+            parts = [s.strip() for s in re.split(r'(?=\b[1-5]\.)', raw_q) if s.strip()]
+
+        for idx, item_txt in enumerate(parts[:5], 1):
+            clean_item = re.sub(r'^[1-5][\.\)]\s*', '', item_txt)
+            draw.ellipse([(88, y), (138, y + 50)], fill=accent_rgba)
+            nw = draw.textbbox((0, 0), str(idx), font=f_num)[2]
+            draw.text((88 + (50 - nw) // 2, y + 10), str(idx), font=f_num, fill=(10, 12, 18, 255))
+
+            wrapped = wrap_text_lines(draw, clean_item, f_item, 810)
+            iy = y + 6
+            for wl in wrapped[:3]:
+                draw.text((160, iy), wl, font=f_item, fill=(248, 250, 252, 255))
+                iy += 40
+            y = max(y + 82, iy + 28)
+
+        draw.line([(88, H - 155), (992, H - 155)], fill=(accent_rgba[0], accent_rgba[1], accent_rgba[2], 140), width=2)
+        rq = card_data.get("reflection_prompt", "WHICH RULE MATTERS MOST TO YOU?").upper()
+        rw = draw.textbbox((0, 0), rq, font=f_foot)[2]
+        draw.text(((W - rw) // 2, H - 122), rq, font=f_foot, fill=accent_rgba)
+        h_str = get_persistent_handle()
+        hw = draw.textbbox((0, 0), h_str, font=f_foot)[2]
+        draw.text(((W - hw) // 2, H - 78), h_str, font=f_foot, fill=(148, 163, 184, 255))
+        return canvas.convert("RGB")
+
+    if format_style == "MODERN_CONTRAST":
+        canvas = bg_image.copy().convert("RGBA")
+        overlay = Image.new("RGBA", (W, H), (10, 12, 18, 200))
+        canvas = Image.alpha_composite(canvas, overlay)
+        draw = ImageDraw.Draw(canvas)
+
+        f_title = load_font(BOLD_FONT_PATH, 52)
+        f_box_h = load_font(BOLD_FONT_PATH, 26)
+        f_box_b = load_font(SERIF_FONT_PATH, 34)
+        f_auth = load_font(BOLD_FONT_PATH, 23)
+
+        t_txt = card_data.get("headline", "WEAKNESS VS. STRENGTH").upper()
+        tw = draw.textbbox((0, 0), t_txt, font=f_title)[2]
+        draw.text(((W - tw) // 2, 110), t_txt, font=f_title, fill=(255, 255, 255, 255))
+        draw_diamond_divider(draw, W // 2, 190, accent_rgba, span=190)
+
+        raw_q = card_data.get("quote", "").strip('"')
+        sides = [s.strip() for s in raw_q.split("|") if s.strip()]
+        left_txt = sides[0] if len(sides) >= 1 else "THE TRAP: Reacting emotionally to every noise and insult."
+        right_txt = sides[1] if len(sides) >= 2 else "THE EDGE: Holding calm silence and letting actions speak."
+
+        draw.rounded_rectangle([(85, 255), (W - 85, 625)], radius=20, fill=(28, 18, 22, 225), outline=(239, 68, 68, 190), width=3)
+        draw.text((125, 290), "WHAT DRAINS YOUR STRENGTH", font=f_box_h, fill=(248, 113, 113, 255))
+        ly = 345
+        for ln in wrap_text_lines(draw, left_txt, f_box_b, 820)[:4]:
+            draw.text((125, ly), ln, font=f_box_b, fill=(241, 245, 249, 255))
+            ly += 48
+
+        draw.rounded_rectangle([(85, 685), (W - 85, 1065)], radius=20, fill=(14, 28, 26, 230), outline=accent_rgba, width=3)
+        draw.text((125, 720), "WHAT BUILDS LASTING POWER", font=f_box_h, fill=accent_rgba)
+        ry = 775
+        for ln in wrap_text_lines(draw, right_txt, f_box_b, 820)[:4]:
+            draw.text((125, ry), ln, font=f_box_b, fill=(255, 255, 255, 255))
+            ry += 48
+
+        auth_str = f"— {card_data.get('author', 'ECHOES OF WISDOM').upper()}"
+        aw = draw.textbbox((0, 0), auth_str, font=f_auth)[2]
+        draw.text(((W - aw) // 2, 1135), auth_str, font=f_auth, fill=accent_rgba)
+
+        h_str = get_persistent_handle()
+        hw = draw.textbbox((0, 0), h_str, font=f_auth)[2]
+        draw.text(((W - hw) // 2, 1215), h_str, font=f_auth, fill=(148, 163, 184, 255))
+        return canvas.convert("RGB")
+
+    # BATTLEFIELD_VOW
+    canvas = bg_image.copy().convert("RGBA")
+    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 105))
+    canvas = Image.alpha_composite(canvas, overlay)
+    draw = ImageDraw.Draw(canvas)
+
+    f_vow = load_font(BOLD_FONT_PATH, 54)
+    f_sub = load_font(SERIF_FONT_PATH, 32)
+    f_auth = load_font(BOLD_FONT_PATH, 22)
+    accent_word = card_data.get("accent_word", "").strip().lower()
+    crimson_hi = (239, 68, 68, 255)
+
+    draw.line([(W // 2 - 120, 495), (W // 2 + 120, 495)], fill=accent_rgba, width=3)
+    lines = wrap_text_lines(draw, card_data.get("headline", "Dear self, I will win. I promise."), f_vow, 900)
+    y = 530
+    for ln in lines[:4]:
+        lw = draw.textbbox((0, 0), ln, font=f_vow)[2]
+        x = (W - lw) // 2
+        draw.text((x + 3, y + 4), ln, font=f_vow, fill=(0, 0, 0, 220))
+        cur_x = x
+        for word in ln.split():
+            w_clean = re.sub(r"[^a-zA-Z]", "", word).lower()
+            w_col = crimson_hi if (accent_word and w_clean == accent_word) else (255, 255, 255, 255)
+            draw.text((cur_x, y), word, font=f_vow, fill=w_col)
+            cur_x = draw.textbbox((cur_x, y), word + " ", font=f_vow)[2]
+        y += 68
+
+    q_lines = wrap_text_lines(draw, card_data.get("quote", "").strip('"'), f_sub, 880)
+    y += 20
+    for ql in q_lines[:2]:
+        qw = draw.textbbox((0, 0), ql, font=f_sub)[2]
+        qx = (W - qw) // 2
+        draw.text((qx + 2, y + 2), ql, font=f_sub, fill=(0, 0, 0, 210))
+        draw.text((qx, y), ql, font=f_sub, fill=accent_rgba)
+        y += 42
+
+    auth_str = f"— {card_data.get('author', 'ECHOES OF WISDOM').upper()}"
+    aw = draw.textbbox((0, 0), auth_str, font=f_auth)[2]
+    draw.text(((W - aw) // 2, y + 22), auth_str, font=f_auth, fill=(226, 232, 240, 255))
+
+    return canvas.convert("RGB")
+
 # ---------------------------------------------------------
-# 6. AI SYNTHESIS ENGINE (NON-BAIT, MEN 35-65+ TUNED)
+# 6. AI SYNTHESIS ENGINE (NON-BAIT, LEADERS, MODERN & ANCIENT)
 # ---------------------------------------------------------
-def synthesize_ai_card(raw_key, pillar_choice="ALL"):
+def synthesize_ai_card(raw_key, pillar_choice="ALL", format_choice="AUTO", palette_choice="AUTO"):
     clean_k = raw_key.strip().strip('"').strip("'")
     used_heads = db.get("used_headlines", [])[-35:]
     available_cards = [
@@ -617,36 +1064,47 @@ def synthesize_ai_card(raw_key, pillar_choice="ALL"):
     if not available_cards:
         available_cards = [c for c in CONTENT_CARDS_VAULT if (pillar_choice == "ALL" or c["pillar"] == pillar_choice)] or CONTENT_CARDS_VAULT
 
-    base_card = random.choice(available_cards)
+    base_card = dict(random.choice(available_cards))
+    if format_choice != "AUTO":
+        base_card["format_style"] = format_choice
+    if palette_choice != "AUTO":
+        base_card["palette"] = palette_choice
+
+    leader_pick = random.choice(LEADER_WISDOM_POOL)
 
     if not clean_k:
-        return base_card, "Curated Vault (Offline Ready)"
+        return base_card, f"Curated Vault ({base_card.get('format_style')})"
 
     pillar_label = PILLAR_DEFINITIONS.get(base_card["pillar"], "Silent Power")
+    fmt_key = base_card.get("format_style", "CHISELED_HERO")
+    fmt_label = FORMAT_STYLES.get(fmt_key, FORMAT_STYLES["CHISELED_HERO"])["label"]
     prompt = (
         f"You are Creative Director for 'Echoes of Wisdom', a high-authority Facebook & Instagram page whose core audience is men aged 35-65+ in the US, UK, Canada, and Australia.\n"
         f"TARGET PILLAR: {pillar_label}\n"
-        f"REFERENCE CONCEPT: {base_card['headline']} — {base_card['quote']}\n"
+        f"CARD FORMAT: {fmt_label} ({fmt_key})\n"
+        f"LEADER / THINKER INSPIRATION: {leader_pick['leader']} ({leader_pick['era']}) — {leader_pick['quote']}\n"
         f"FORBIDDEN HEADLINES (DO NOT REPEAT): {', '.join(used_heads) if used_heads else 'None'}\n"
         f"STRICT RULES:\n"
-        f"1. Create a completely fresh, original 4:5 Feed Card on the target pillar.\n"
-        f"2. HEADLINE: 3 to 5 punchy uppercase words (max 34 characters). No clichés.\n"
-        f"3. QUOTE: 18 to 28 words of profound, grounded wisdom or a micro-parable that speaks directly to mature men (financial sovereignty, father-to-son legacy, health/peace after 40, or silent boundaries).\n"
-        f"4. REFLECTION_PROMPT: An authentic, open-ended question (max 70 characters) that invites a thoughtful sentence in the comments. STRICTLY NEVER use engagement bait like 'Drop 1 or 2', 'Comment YES', or '1 vs 2'.\n"
-        f"5. CAPTION_STORY: A 3-sentence micro-parable or hard truth written in crisp international English.\n"
-        f"6. BG_SCENE: A vivid 9:16/4:5 classical oil painting or moody cinematic scene description (no text in image).\n"
+        f"1. Create a fresh, thought-provoking 4:5 Feed Card inspired by {leader_pick['leader']} or a sharp modern vs. ancient contrast.\n"
+        f"2. HEADLINE: Crisp, memorable statement or hook (max 65 characters). Avoid tired clichés.\n"
+        f"3. QUOTE: 14 to 28 words. If format is NUMBERED_CHECKLIST, write 5 concise numbered points separated by ' | ' (e.g. '1. ... | 2. ... | 3. ... | 4. ... | 5. ...'). If format is MODERN_CONTRAST, write two contrasting sides separated by ' | '.\n"
+        f"4. REFLECTION_PROMPT: An authentic, open-ended question (max 70 characters) inviting a real comment. STRICTLY NEVER use engagement bait like 'Drop 1 or 2', 'Comment YES', or numeric polls.\n"
+        f"5. CAPTION_STORY: A 3-sentence compelling micro-story or hard truth in crisp international English.\n"
+        f"6. BG_SCENE: A vivid scene description—alternate between modern everyday realism (sunlit city apartment, coffee desk, rainy dusk street) and ancient/classic scenes (no text in image).\n"
         f"OUTPUT STRICT JSON ONLY:\n"
         "{\n"
         f'  "pillar": "{base_card["pillar"]}",\n'
+        f'  "format_style": "{fmt_key}",\n'
         '  "category": "1-2 WORD UPPERCASE CATEGORY",\n'
-        '  "headline": "3-5 UPPERCASE WORDS",\n'
-        '  "quote": "\\"Your 18-28 word quote or micro-parable.\\"",\n'
-        '  "author": "HISTORICAL AUTHOR OR ANCIENT MAXIM",\n'
+        '  "headline": "Fresh headline or statement",\n'
+        '  "quote": "Your 14-28 word quote, checklist, or contrast.",\n'
+        '  "accent_word": "single_key_word",\n'
+        f'  "author": "{leader_pick["leader"]}",\n'
         '  "reflection_prompt": "OPEN-ENDED QUESTION IN UPPERCASE",\n'
         '  "sub_prompt": "SHARE YOUR PERSPECTIVE IN THE COMMENTS",\n'
-        '  "bg_scene": "Classical dark chiaroscuro oil painting scene description...",\n'
+        '  "bg_scene": "Visual scene description...",\n'
         '  "caption_story": "Three compelling sentences expanding the lesson for mature readers.",\n'
-        '  "tags": "#Stoicism #LifeLessons #Mindset #Wisdom #PersonalGrowth"\n'
+        '  "tags": "#Mindset #LifeLessons #PersonalGrowth #Discipline #Wisdom"\n'
         "}"
     )
 
@@ -654,38 +1112,29 @@ def synthesize_ai_card(raw_key, pillar_choice="ALL"):
         client = get_fast_gemini_client(clean_k)
         for m in ["gemini-3.8-flash", "gemini-3.8-flash-lite"]:
             try:
-                try:
-                    cfg = types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        temperature=0.88,
-                        max_output_tokens=900,
-                        thinking_config=types.ThinkingConfig(thinking_level="MINIMAL")
-                    )
-                except Exception:
-                    cfg = types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        temperature=0.88,
-                        max_output_tokens=900
-                    )
+                cfg = types.GenerateContentConfig(response_mime_type="application/json", temperature=0.92, max_output_tokens=950)
                 res = client.models.generate_content(model=m, contents=prompt, config=cfg)
                 raw = res.text.strip()
                 match = re.search(r'\{.*\}', raw, re.DOTALL)
                 parsed = json.loads(match.group(0) if match else raw)
                 if isinstance(parsed, dict) and "headline" in parsed and "quote" in parsed:
                     parsed["id"] = f"AI_{datetime.now().strftime('%H%M%S')}"
-                    return parsed, "Gemini 3.8 Turbo AI"
+                    parsed["palette"] = base_card.get("palette", "IMPERIAL_GOLD")
+                    if format_choice != "AUTO":
+                        parsed["format_style"] = format_choice
+                    return parsed, f"Gemini AI • {leader_pick['leader']}"
             except Exception:
                 continue
     except Exception:
         pass
 
-    return base_card, "Curated Vault"
+    return base_card, f"Curated Vault ({base_card.get('author','Wisdom')})"
 
 def append_image_excel_tracker(entry):
     if not OPENPYXL_AVAILABLE:
         return False
     headers = [
-        "Post ID", "Target Date", "Time (IST)", "Pillar", "Category",
+        "Post ID", "Target Date", "Time (IST)", "Pillar", "Format Style", "Category",
         "Headline", "Author", "File Name", "Feed Caption", "First Comment"
     ]
     if os.path.exists(EXCEL_IMAGE_TRACKER):
@@ -708,6 +1157,7 @@ def append_image_excel_tracker(entry):
         entry.get("date", ""),
         entry.get("time", "17:30"),
         entry.get("pillar", ""),
+        entry.get("format_style", ""),
         entry.get("category", ""),
         entry.get("headline", ""),
         entry.get("author", ""),
@@ -744,21 +1194,32 @@ def render_copy_btn(bid, label, text):
     </script>
     """, height=48)
 
+# Restore active card from disk on reload
+if "active_card" not in st.session_state and os.path.exists(ACTIVE_CARD_PATH):
+    try:
+        with open(ACTIVE_CARD_PATH, "r", encoding="utf-8") as af:
+            saved_ac = json.load(af)
+            if isinstance(saved_ac, dict) and "card" in saved_ac:
+                st.session_state["active_card"] = saved_ac["card"]
+                st.session_state["active_card_src"] = saved_ac.get("src", "Saved Card")
+    except Exception:
+        pass
+
 # ---------------------------------------------------------
 # 7. STUDIO HEADER & CREDENTIALS
 # ---------------------------------------------------------
 next_d = get_next_post_date()
 st.markdown("""
 <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC; margin-bottom: 8px;">
-    🏛️ ECHOES IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v3.4 // 4:5 VIRAL PARABLE & LEGACY ENGINE</span>
+    🏛️ ECHOES IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v3.8 // 8 FORMATS, 18+ LEADERS, ORNATE SHAPES & MODERN/ANCIENT ENGINE</span>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown(f"""
 <div style="margin-bottom: 14px;">
-    <span class="badge badge-green">● 4:5 FEED MASTER (1080×1350)</span>
-    <span class="badge badge-purple">🎯 MEN 35-65+ PILLARS</span>
-    <span class="badge badge-blue">🛡️ NON-BAIT ENGAGEMENT</span>
+    <span class="badge badge-green">● 8 FORMATS (1080×1350)</span>
+    <span class="badge badge-purple">🏛️ 18+ LEADERS & THINKERS</span>
+    <span class="badge badge-blue">✨ EMOJIS, SHAPES & HASHTAGS</span>
     <span class="badge badge-amber">📅 NEXT SLOT: {next_d} @ {db.get('post_time', '17:30')} IST</span>
 </div>
 """, unsafe_allow_html=True)
@@ -775,7 +1236,7 @@ with st.expander("🔑 API CREDENTIALS, HANDLE & GUIDE LINK", expanded=(not bool
 
     c_h1, c_h2 = st.columns(2)
     with c_h1:
-        uh = st.text_input("Brand Handle", value=get_persistent_handle())
+        uh = st.text_input("Facebook & Instagram Handle", value=get_persistent_handle())
         if uh != get_persistent_handle():
             save_persistent_handle(uh)
     with c_h2:
@@ -783,37 +1244,69 @@ with st.expander("🔑 API CREDENTIALS, HANDLE & GUIDE LINK", expanded=(not bool
         if ug != get_persistent_guide_url():
             save_persistent_guide_url(ug)
 
+vault_hist = load_card_vault_history()
+if vault_hist:
+    with st.expander(f"📦 RESTORE PREVIOUS CARD ({len(vault_hist)} SAVED IN VAULT)", expanded=False):
+        v_labels = [f"🖼️ {v.get('headline','Card')} — {v.get('author','')} ({v.get('format_style','CHISELED_HERO')})" for v in vault_hist]
+        v_idx = st.selectbox("Select Saved Card", range(len(vault_hist)), format_func=lambda i: v_labels[i], key="img_vault_sel")
+        if st.button("🔄 Restore Selected Card", key="img_vault_btn"):
+            st.session_state["active_card"] = vault_hist[v_idx]
+            st.session_state["active_card_src"] = "Saved Vault"
+            save_active_card_to_disk(vault_hist[v_idx], "Saved Vault")
+            st.rerun()
+
 # ---------------------------------------------------------
-# 8. CARD SYNTHESIS CONTROLS
+# 8. CARD SYNTHESIS CONTROLS & DISCARD / REGENERATE
 # ---------------------------------------------------------
 st.markdown("### ⚡ 1. Synthesize 4:5 Feed Card")
-col_p1, col_p2 = st.columns([2, 1])
+col_p1, col_p2, col_p3 = st.columns([1.2, 1.2, 0.9])
 with col_p1:
     chosen_pillar = st.selectbox(
-        "Audience Content Pillar (Tuned for Men 35-65+)",
+        "Audience Pillar (35-65+)",
         list(PILLAR_DEFINITIONS.keys()),
         format_func=lambda k: PILLAR_DEFINITIONS[k]
     )
 with col_p2:
+    chosen_fmt = st.selectbox(
+        "Card Format Style",
+        ["AUTO"] + list(FORMAT_STYLES.keys()),
+        format_func=lambda k: "🎲 Auto Format" if k == "AUTO" else FORMAT_STYLES[k]["label"].split(" (")[0]
+    )
+with col_p3:
     accent_choice = st.selectbox(
-        "Gold / Accent Palette",
-        ["IMPERIAL_GOLD", "GLACIAL_ICE", "FORGE_AMBER"],
-        format_func=lambda k: {"IMPERIAL_GOLD": "👑 Imperial Gold", "GLACIAL_ICE": "❄️ Glacial Cyan", "FORGE_AMBER": "🔥 Forge Amber"}[k]
+        "Color Palette",
+        ["AUTO"] + list(ACCENT_PALETTES.keys()),
+        format_func=lambda k: "🎲 Auto Color" if k == "AUTO" else ACCENT_PALETTES[k]["label"]
     )
 
-if st.button("🚀 Synthesize Fresh 4:5 Parable Card", type="primary"):
-    with st.spinner("⚡ Synthesizing high-share parable & non-bait discussion prompt..."):
-        card, src = synthesize_ai_card(get_persistent_api_key(), chosen_pillar)
-        st.session_state["active_card"] = card
-        st.session_state["active_card_src"] = src
-        st.rerun()
+col_btn1, col_btn2 = st.columns([2, 1])
+with col_btn1:
+    if st.button("🚀 Synthesize Fresh 4:5 Card", type="primary", use_container_width=True):
+        with st.spinner("⚡ Synthesizing fresh leader insight & visual layout..."):
+            card, src = synthesize_ai_card(get_persistent_api_key(), chosen_pillar, chosen_fmt, accent_choice)
+            st.session_state["active_card"] = card
+            st.session_state["active_card_src"] = src
+            save_to_card_vault_history(card)
+            save_active_card_to_disk(card, src)
+            st.rerun()
+with col_btn2:
+    if st.button("🔄 Discard & New Card", use_container_width=True):
+        with st.spinner("⚡ Generating a completely different format & leader..."):
+            card, src = synthesize_ai_card(get_persistent_api_key(), "ALL", "AUTO", "AUTO")
+            st.session_state["active_card"] = card
+            st.session_state["active_card_src"] = src
+            save_to_card_vault_history(card)
+            save_active_card_to_disk(card, src)
+            st.rerun()
 
 if "active_card" not in st.session_state:
     st.session_state["active_card"] = CONTENT_CARDS_VAULT[0]
     st.session_state["active_card_src"] = "Curated Vault"
 
 card = st.session_state["active_card"]
-st.caption(f"Source: `{st.session_state.get('active_card_src', 'Vault')}` | Pillar: `{PILLAR_DEFINITIONS.get(card.get('pillar', 'SOVEREIGNTY'))}`")
+resolved_fmt = card.get("format_style", "CHISELED_HERO") if chosen_fmt == "AUTO" else chosen_fmt
+resolved_palette = card.get("palette", "IMPERIAL_GOLD") if accent_choice == "AUTO" else accent_choice
+st.caption(f"Source: `{st.session_state.get('active_card_src', 'Vault')}` | Format: `{FORMAT_STYLES.get(resolved_fmt, FORMAT_STYLES['CHISELED_HERO'])['label']}`")
 
 # ---------------------------------------------------------
 # 9. BACKGROUND ARTWORK & LIVE EDITOR
@@ -824,25 +1317,40 @@ render_copy_btn("bg_pr", "COPY ARTWORK PROMPT", card.get("bg_scene", ""))
 
 col_bg1, col_bg2, col_bg3 = st.columns([2, 1, 1])
 with col_bg1:
-    uploaded_bg = st.file_uploader("Upload Custom Artwork (Optional - auto-generates dark canvas if empty)", type=["jpg", "jpeg", "png", "webp"])
+    uploaded_bg = st.file_uploader("Upload Custom Artwork (Auto-saved on disk)", type=["jpg", "jpeg", "png", "webp"])
+    if uploaded_bg:
+        with open(SAVED_BG_PATH, "wb") as bf:
+            bf.write(uploaded_bg.read())
 with col_bg2:
     wm_crop_pct = st.slider("Bottom Watermark Crop %", min_value=0.0, max_value=15.0, value=6.5, step=0.5)
 with col_bg3:
     bg_darkness = st.slider("Backdrop Brightness", min_value=0.25, max_value=0.85, value=0.52, step=0.03)
 
-st.markdown("### ✍️ 3. Fine-Tune Card Typography")
+if os.path.exists(SAVED_BG_PATH):
+    col_clr_bg1, col_clr_bg2 = st.columns([3, 1])
+    with col_clr_bg1:
+        st.caption("✓ Custom background artwork active in vault")
+    with col_clr_bg2:
+        if st.button("🗑️ Clear Custom BG"):
+            try: os.remove(SAVED_BG_PATH)
+            except Exception: pass
+            st.rerun()
+
+st.markdown("### ✍️ 3. Fine-Tune Card Typography & Shapes")
 col_t1, col_t2 = st.columns([1, 2])
 with col_t1:
     ed_cat = st.text_input("Category Pill", value=card.get("category", "SOVEREIGNTY"))
-    ed_auth = st.text_input("Attribution", value=card.get("author", "ANCIENT MAXIM"))
+    ed_auth = st.text_input("Leader / Attribution", value=card.get("author", "MARCUS AURELIUS"))
 with col_t2:
-    ed_head = st.text_input("Main Chiseled Headline", value=card.get("headline", ""))
-    ed_quote = st.text_area("Parable / Quote Body", value=card.get("quote", ""), height=85)
+    ed_head = st.text_input("Main Headline / Statement", value=card.get("headline", ""))
+    ed_quote = st.text_area("Parable / Quote / Checklist Body", value=card.get("quote", ""), height=90)
 
-col_r1, col_r2 = st.columns([2, 1])
+col_r1, col_r2, col_r3 = st.columns([2, 1, 1])
 with col_r1:
     ed_ref_q = st.text_input("Bottom Reflection Question (Non-Bait)", value=card.get("reflection_prompt", ""))
 with col_r2:
+    ed_accent_w = st.text_input("Accent Highlight Word", value=card.get("accent_word", "win."))
+with col_r3:
     ed_ref_sub = st.text_input("Bottom Action Line", value=card.get("sub_prompt", "SHARE YOUR PERSPECTIVE IN THE COMMENTS"))
 
 edited_card = {
@@ -850,24 +1358,24 @@ edited_card = {
     "category": ed_cat,
     "headline": ed_head,
     "quote": ed_quote,
+    "accent_word": ed_accent_w,
     "author": ed_auth,
     "reflection_prompt": ed_ref_q,
     "sub_prompt": ed_ref_sub,
 }
 
-# Render 1080x1350 Master Image
-if uploaded_bg:
-    raw_bg = Image.open(uploaded_bg)
+if os.path.exists(SAVED_BG_PATH):
+    raw_bg = Image.open(SAVED_BG_PATH)
     prepped_bg = crop_and_prep_background(raw_bg, bottom_crop_pct=wm_crop_pct / 100.0, darken_factor=bg_darkness)
 else:
-    tone_key = "GOLD" if accent_choice == "IMPERIAL_GOLD" else ("ICE" if accent_choice == "GLACIAL_ICE" else "AMBER")
+    tone_key = ACCENT_PALETTES.get(resolved_palette, ACCENT_PALETTES["IMPERIAL_GOLD"])["bg_tone"]
     proc_bg = create_atmospheric_canvas(1080, 1350, seed_str=ed_head, tone=tone_key)
     prepped_bg = ImageEnhance.Brightness(proc_bg).enhance(bg_darkness / 0.52)
 
-final_img = render_4x5_master_card(prepped_bg, edited_card, accent_theme=accent_choice)
+final_img = render_feed_card_by_format(prepped_bg, edited_card, accent_theme=resolved_palette, format_style=resolved_fmt)
 
 st.markdown("### 🖼️ 4. Master 4:5 Preview & Export")
-st.image(final_img, caption="1080×1350 (4:5 Feed Portrait — Chiseled Relief & Non-Bait Reflection Strip)", use_container_width=True)
+st.image(final_img, caption=f"1080×1350 (4:5 Feed Portrait — {resolved_fmt} • {resolved_palette})", use_container_width=True)
 
 slug = re.sub(r"[^a-zA-Z0-9]+", "_", ed_head).strip("_").lower() or "echoes_card"
 file_name = f"{next_d.replace('-', '')}_{slug}.jpg"
@@ -876,29 +1384,33 @@ final_img.save(img_buf, format="JPEG", quality=95)
 st.download_button(f"💾 Download Master 4:5 Image ({file_name})", img_buf.getvalue(), file_name, "image/jpeg")
 
 # ---------------------------------------------------------
-# 10. NON-BAIT FEED CAPTION & FIRST COMMENT
+# 10. PROVOCATIVE, ENGAGING CAPTION WITH EMOJIS & HASHTAGS
 # ---------------------------------------------------------
 st.divider()
-st.markdown("### 📝 5. Non-Bait Meta Feed Caption & First Comment")
+st.markdown("### 📝 5. Engaging Meta Feed Caption, Emojis & Hashtags")
 
+hashtags_clean = card.get("tags", "#Mindset #LifeLessons #PersonalGrowth #SelfRespect #Discipline #Wisdom")
 feed_caption = (
-    f"{ed_head.title()}\n\n"
-    f"{card.get('caption_story', '')}\n\n"
-    f"{ed_ref_q.capitalize()}\n\n"
-    f"Save this reminder for difficult days, or share it with someone building their future.\n\n"
-    f"• Follow {get_persistent_handle()} for timeless clarity.\n\n"
-    f"{card.get('tags', '#Stoicism #LifeLessons #Mindset #Wisdom #PersonalGrowth')}"
+    f"⚡ {ed_head.upper()} 🏛️\n\n"
+    f"💡 {card.get('caption_story', '')}\n\n"
+    f"💬 {ed_ref_q.capitalize()} 👇\n\n"
+    f"🔖 Save this reminder for tough days, or share it with someone building their future.\n"
+    f"✨ Follow {get_persistent_handle()} for daily clarity.\n\n"
+    f"{hashtags_clean}"
 )
-st.text_area("1. Meta Feed Post Caption (Zero Engagement Bait)", feed_caption, height=185)
+st.text_area("1. Meta Feed Post Caption (Zero Engagement Bait)", feed_caption, height=195)
 render_copy_btn("feed_cap", "COPY FEED CAPTION", feed_caption)
 
+st.text_input("2. Hashtags Only", hashtags_clean)
+render_copy_btn("feed_tags", "COPY HASHTAGS", hashtags_clean)
+
 first_comment = (
-    f"🏛️ Want a structured daily system to build emotional composure and mental discipline?\n\n"
-    f"Explore The 30-Day Stoic Emotional Mastery Guide & Workbook here:\n"
+    f"🏛️ Want a structured daily system to build emotional composure and mental discipline? ✨\n\n"
+    f"📘 Explore The 30-Day Stoic Emotional Mastery Guide & Workbook here:\n"
     f"{get_persistent_guide_url()}\n"
-    f"(Use code FIRST50 at checkout)"
+    f"🎟️ Use code FIRST50 at checkout"
 )
-st.text_area("2. Pinned First Comment (Clean Guide Link)", first_comment, height=115)
+st.text_area("3. Pinned First Comment (Clean Guide Link)", first_comment, height=115)
 render_copy_btn("first_comm", "COPY FIRST COMMENT", first_comment)
 
 # ---------------------------------------------------------
@@ -926,6 +1438,7 @@ if st.button("✅ Lock Post & Advance Schedule", type="primary"):
         "date": d_str,
         "time": sched_time,
         "pillar": edited_card.get("pillar", "SOVEREIGNTY"),
+        "format_style": resolved_fmt,
         "headline": ed_head,
         "file": file_name
     })
@@ -939,6 +1452,7 @@ if st.button("✅ Lock Post & Advance Schedule", type="primary"):
         "date": d_str,
         "time": sched_time,
         "pillar": edited_card.get("pillar", ""),
+        "format_style": resolved_fmt,
         "category": ed_cat,
         "headline": ed_head,
         "author": ed_auth,
@@ -947,12 +1461,21 @@ if st.button("✅ Lock Post & Advance Schedule", type="primary"):
         "first_comment": first_comment
     })
 
-    st.session_state["img_banner"] = f"✓ Scheduled '{ed_head}' for {d_str} @ {sched_time} IST!"
+    st.session_state["img_banner"] = f"✓ Scheduled '{ed_head}' ({resolved_fmt}) for {d_str} @ {sched_time} IST!"
     st.rerun()
 
 # ---------------------------------------------------------
-# 12. SCHEDULED QUEUE VIEWER
+# 12. SCHEDULED QUEUE & EXCEL EXPORT
 # ---------------------------------------------------------
+if os.path.exists(EXCEL_IMAGE_TRACKER):
+    with open(EXCEL_IMAGE_TRACKER, "rb") as ef:
+        st.download_button(
+            "📊 Download Image Content Tracker (.xlsx)",
+            ef.read(),
+            "Echoes_Image_Content_Tracker.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
 if db.get("scheduled_posts"):
     with st.expander(f"📋 SCHEDULED QUEUE ({len(db['scheduled_posts'])})", expanded=False):
         for item in reversed(db["scheduled_posts"]):
@@ -963,6 +1486,7 @@ if db.get("scheduled_posts"):
                     <span style="color: #64748B;"> @ </span>
                     <span style="color: #FBBF24;">{item.get('time', '17:30')} IST</span>
                     <div style="color: #F8FAFC; font-weight: 600; margin-top: 2px;">{item.get('headline')}</div>
+                    <div style="color: #94A3B8; font-size: 11px;">Format: {item.get('format_style', 'CHISELED_HERO')}</div>
                 </div>
                 <div style="color: #34D399; font-weight: 700; font-size: 11px;">● SCHEDULED</div>
             </div>
