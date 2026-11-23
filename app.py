@@ -807,7 +807,7 @@ if not st.session_state.get("just_locked_cycle") and "active_flow_card" not in s
 next_d = get_next_post_date()
 st.markdown("""
 <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC; margin-bottom: 8px;">
-    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.9 // 8.0% DEFAULT WATERMARK CROP, AUTO-RESET ON LOCK & 28 VISUAL STYLES</span>
+    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.10 // KEYERROR FIX, 8.0% DEFAULT WATERMARK CROP & 28 VISUAL STYLES</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -930,11 +930,16 @@ if "active_flow_card" not in st.session_state:
     st.session_state["active_flow_card"] = default_c
     st.session_state["active_flow_src"] = "Curated Vault"
 
-if not st.session_state.get("just_locked_cycle", False):
+if not st.session_state.get("just_locked_cycle", False) and "active_flow_card" in st.session_state:
     card = st.session_state["active_flow_card"]
-    resolved_style = card.get("flow_style", "MODERN_EDITORIAL_PHOTO") if chosen_style == "AUTO" else chosen_style
+    default_style_key = next(iter(FLOW_VISUAL_STYLES.keys()))
+    resolved_style = card.get("flow_style", default_style_key) if chosen_style == "AUTO" else chosen_style
+    if resolved_style not in FLOW_VISUAL_STYLES:
+        resolved_style = default_style_key
     resolved_pal = card.get("palette", "IMPERIAL_GOLD") if chosen_palette == "AUTO" else chosen_palette
-    st.caption(f"Source: `{st.session_state.get('active_flow_src', 'Vault')}` | Style: `{FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES['MODERN_EDITORIAL_PHOTO'])['label']}`")
+    src_label = str(st.session_state.get("active_flow_src") or "Vault")
+    style_label = FLOW_VISUAL_STYLES[resolved_style]["label"]
+    st.caption(f"Source: `{src_label}` | Style: `{style_label}`")
 
     with st.expander("✏️ Customize Text Overlay & Scene Before Copying Flow Prompt", expanded=False):
         col_e1, col_e2 = st.columns([2, 1])
