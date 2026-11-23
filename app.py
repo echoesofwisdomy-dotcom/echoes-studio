@@ -260,7 +260,7 @@ def get_next_post_date():
     return now_ist.date().strftime("%Y-%m-%d")
 
 # ---------------------------------------------------------
-# 3. 28 DISTINCT FULL-BLEED 4:3 GOOGLE FLOW STYLES, 6 PALETTES & LEADERS
+# 3. 8 DISTINCT FULL-BLEED 4:3 GOOGLE FLOW STYLES, 6 PALETTES & LEADERS
 # ---------------------------------------------------------
 PILLAR_DEFINITIONS = {
     "ALL": "🎲 Smart AI Rotation (All 5 Pillars)",
@@ -413,7 +413,6 @@ FLOW_VISUAL_STYLES = {
         "art_spec": "full-bleed long-exposure photograph of a lone silhouette standing on a dark ridge beneath a crystal-clear Milky Way night sky"
     }
 }
-
 COLOR_PALETTES = {
     "IMPERIAL_GOLD":  {"label": "👑 Imperial Gold & Obsidian",   "desc": "radiant imperial gold and crisp ivory-white lettering against deep obsidian shadows"},
     "GLACIAL_ICE":    {"label": "❄️ Glacial Cyan & Steel",       "desc": "frost glacial cyan and pure white lettering against cool steel-blue shadows"},
@@ -445,7 +444,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MODERN_MONEY",
         "pillar": "FINANCE",
-        "flow_style": "01_MODERN_WINDOW_APARTMENT",
+        "flow_style": "MODERN_EDITORIAL_PHOTO",
         "palette": "EMERALD_BONE",
         "headline": "NOBODY PAYS YOUR BILLS OUT OF SYMPATHY",
         "subtext": "Quiet savings buy the freedom to say no without panic.",
@@ -458,7 +457,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_LINCOLN_AXE",
         "pillar": "LEGACY",
-        "flow_style": "05_ENGRAVED_PORTRAIT_PARCHMENT",
+        "flow_style": "WARM_PARCHMENT_PORTRAIT",
         "palette": "CRIMSON_IVORY",
         "headline": "SHARPEN THE AXE BEFORE YOU SWING",
         "subtext": "Four hours of quiet preparation prevent four months of regret.",
@@ -471,7 +470,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_FRANKL_PAUSE",
         "pillar": "SOVEREIGNTY",
-        "flow_style": "07_SACRED_GEOMETRY_SHADOW",
+        "flow_style": "SACRED_GEOMETRY_MYTHIC",
         "palette": "GLACIAL_ICE",
         "headline": "BETWEEN PROVOCATION AND REACTION LIES YOUR FREEDOM",
         "subtext": "Lose your temper, and a stranger becomes your master.",
@@ -484,7 +483,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_ROOSEVELT_ARENA",
         "pillar": "SOVEREIGNTY",
-        "flow_style": "04_MONOCHROME_STREET_GRIT",
+        "flow_style": "MONOCHROME_GRIT_SCENE",
         "palette": "FORGE_AMBER",
         "headline": "IGNORE THE CRITICS. STAY IN THE ARENA.",
         "subtext": "People who build nothing always have plenty of advice.",
@@ -497,7 +496,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MANDELA_POISON",
         "pillar": "LONGEVITY",
-        "flow_style": "06_STORYBOOK_MARKER_HIGHLIGHT",
+        "flow_style": "STORYBOOK_WARM_ILLUSTRATION",
         "palette": "ROYAL_VIOLET",
         "headline": "BITTERNESS ONLY POISONS THE ONE WHO CARRIES IT",
         "subtext": "Let go of old grudges to reclaim your peace after forty.",
@@ -510,7 +509,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_FIVE_SILENT_PLACES",
         "pillar": "PARABLES",
-        "flow_style": "08_FIVE_POINT_CHECKLIST",
+        "flow_style": "NUMBERED_CHECKLIST_POSTER",
         "palette": "IMPERIAL_GOLD",
         "headline": "5 PLACES TO STAY SILENT AT ALL COSTS:",
         "subtext": "1. When anger wants the first word. 2. When you lack full facts. 3. When baited into a fight. 4. When plans are unfinished. 5. When actions prove it better.",
@@ -523,7 +522,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MUSASHI_CRAFT",
         "pillar": "LEGACY",
-        "flow_style": "02_CLASSIC_OIL_CHIAROSCURO",
+        "flow_style": "CLASSIC_OIL_RELIEF",
         "palette": "IMPERIAL_GOLD",
         "headline": "MASTER ONE CRAFT DEEPLY",
         "subtext": "Deep skill in one discipline builds clarity across your entire life.",
@@ -536,7 +535,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MUNGER_FOLLY",
         "pillar": "FINANCE",
-        "flow_style": "03_MINIMAL_OBSIDIAN_POSTER",
+        "flow_style": "DARK_MINIMAL_TYPO",
         "palette": "GLACIAL_ICE",
         "headline": "CONSISTENTLY AVOID FOOLISH MISTAKES",
         "subtext": "Long-term advantage comes from protecting your downside first.",
@@ -551,8 +550,8 @@ FLOW_CURATED_VAULT = [
 # ---------------------------------------------------------
 # 4. GOOGLE FLOW PROMPT ARCHITECT (NATIVE 4:3 FULL-BLEED)
 # ---------------------------------------------------------
-def build_google_flow_image_prompt(card_data, flow_style_key="01_MODERN_WINDOW_APARTMENT", palette_key="IMPERIAL_GOLD", handle_str="@EchoesOfWisdomOfficial"):
-    style_meta = FLOW_VISUAL_STYLES.get(flow_style_key, FLOW_VISUAL_STYLES["01_MODERN_WINDOW_APARTMENT"])
+def build_google_flow_image_prompt(card_data, flow_style_key="MODERN_EDITORIAL_PHOTO", palette_key="IMPERIAL_GOLD", handle_str="@EchoesOfWisdomOfficial"):
+    style_meta = FLOW_VISUAL_STYLES.get(flow_style_key, FLOW_VISUAL_STYLES["MODERN_EDITORIAL_PHOTO"])
     pal_meta = COLOR_PALETTES.get(palette_key, COLOR_PALETTES["IMPERIAL_GOLD"])
 
     headline = card_data.get("headline", "").strip()
@@ -569,7 +568,7 @@ def build_google_flow_image_prompt(card_data, flow_style_key="01_MODERN_WINDOW_A
         f"TYPOGRAPHY & LAYOUT: {style_meta['typo_spec']}, rendered in {pal_meta['desc']}. "
         f"The main headline reads verbatim: \"{headline}\".{sub_clause}{auth_clause} "
         f"Positioned subtly in the top-left corner is a small, clean brand handle reading \"{handle_str}\". "
-        f"COMPOSITION & SAFE ZONE: Keep ALL text, lines, and attributions strictly within the upper and middle 82% of the frame, leaving the bottom 18% completely free of any text or lines so bottom watermark cropping is clean. Edge-to-edge full-bleed 4:3 framing with NO outer border frames, razor-sharp accurate spelling, no text overlapping faces, strictly two arms per person, photorealistic 8k."
+        f"COMPOSITION & SAFE ZONE: Keep ALL text, lines, and attributions strictly within the upper and middle 82% of the frame, leaving the bottom 18% completely free of any text or lines so zero cropping is ever required. Edge-to-edge full-bleed 4:3 framing with NO outer border frames, razor-sharp accurate spelling, no text overlapping faces, strictly two arms per person, photorealistic 8k."
     )
 
 def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice="AUTO", palette_choice="AUTO"):
@@ -603,7 +602,7 @@ def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice
         return base, f"Curated Vault • {base.get('author','Wisdom')}"
 
     pillar_label = PILLAR_DEFINITIONS.get(base["pillar"], "Silent Power")
-    style_meta = FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES["01_MODERN_WINDOW_APARTMENT"])
+    style_meta = FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES["MODERN_EDITORIAL_PHOTO"])
     pal_meta = COLOR_PALETTES.get(resolved_pal, COLOR_PALETTES["IMPERIAL_GOLD"])
 
     ai_prompt = (
@@ -659,12 +658,12 @@ def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice
     return base, f"Curated Vault • {base.get('author','Wisdom')}"
 
 # ---------------------------------------------------------
-# 5. DEFAULT WATERMARK CROPPER, LOGO OVERLAY & EXPORT ENGINE
+# 5. FULL-BLEED WATERMARK CROPPER, LOGO OVERLAY & EXPORT ENGINE
 # ---------------------------------------------------------
 def process_uploaded_flow_image(
     pil_img,
-    bottom_crop_pct=0.055,
-    clean_br_corner=False,
+    bottom_crop_pct=0.0,
+    clean_br_corner=True,
     logo_path=None,
     logo_pos="Bottom-Right (Covers Sparkle)",
     logo_scale_pct=11,
@@ -684,7 +683,8 @@ def process_uploaded_flow_image(
     target_h = int(round(target_w * (h / float(w))))
     im = im.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-    if clean_br_corner:
+    # Zero-crop bottom-right sparkle removal: sample clean background patch just left of the sparkle & blend smoothly
+    if clean_br_corner and bottom_crop_pct == 0:
         patch_w = int(target_w * 0.11)
         patch_h = int(target_h * 0.11)
         src_box = (target_w - patch_w * 2 - 12, target_h - patch_h, target_w - patch_w - 12, target_h)
@@ -807,7 +807,7 @@ if not st.session_state.get("just_locked_cycle") and "active_flow_card" not in s
 next_d = get_next_post_date()
 st.markdown("""
 <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC; margin-bottom: 8px;">
-    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.8 // AUTO-RESET ON LOCK, DEFAULT WATERMARK CROP & 28 VISUAL STYLES</span>
+    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.9 // 8.0% DEFAULT WATERMARK CROP, AUTO-RESET ON LOCK & 28 VISUAL STYLES</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -842,7 +842,7 @@ with st.expander("🔑 API CREDENTIALS, BRAND LOGO VAULT & HANDLE", expanded=(no
             save_persistent_guide_url(ug)
 
     st.divider()
-    st.markdown("#### 🏛️ Persistent Brand Logo (Auto-Stamped in App)")
+    st.markdown("#### 🏛️ Persistent Brand Logo (Auto-Stamped in App — Easier & Cleaner Than Flow)")
     col_lg1, col_lg2 = st.columns([2, 1])
     with col_lg1:
         logo_up = st.file_uploader("Upload Transparent PNG Logo (Saved permanently in vault)", type=["png", "webp", "jpg"], key="v45_logo_up")
@@ -867,7 +867,6 @@ if vault_hist:
         v_labels = [f"🖼️ {v.get('headline','Prompt')} — {v.get('author','')} ({v.get('flow_style','')})" for v in vault_hist]
         v_idx = st.selectbox("Select Saved Prompt", range(len(vault_hist)), format_func=lambda i: v_labels[i], key="img_vault_sel")
         if st.button("🔄 Restore Selected Prompt", key="img_vault_btn"):
-            st.session_state["just_locked_cycle"] = False
             st.session_state["active_flow_card"] = vault_hist[v_idx]
             st.session_state["active_flow_src"] = "Saved Vault"
             save_active_card_to_disk(vault_hist[v_idx], "Saved Vault")
@@ -933,9 +932,9 @@ if "active_flow_card" not in st.session_state:
 
 if not st.session_state.get("just_locked_cycle", False):
     card = st.session_state["active_flow_card"]
-    resolved_style = card.get("flow_style", "01_MODERN_WINDOW_APARTMENT") if chosen_style == "AUTO" else chosen_style
+    resolved_style = card.get("flow_style", "MODERN_EDITORIAL_PHOTO") if chosen_style == "AUTO" else chosen_style
     resolved_pal = card.get("palette", "IMPERIAL_GOLD") if chosen_palette == "AUTO" else chosen_palette
-    st.caption(f"Source: `{st.session_state.get('active_flow_src', 'Vault')}` | Style: `{FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES['01_MODERN_WINDOW_APARTMENT'])['label']}`")
+    st.caption(f"Source: `{st.session_state.get('active_flow_src', 'Vault')}` | Style: `{FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES['MODERN_EDITORIAL_PHOTO'])['label']}`")
 
     with st.expander("✏️ Customize Text Overlay & Scene Before Copying Flow Prompt", expanded=False):
         col_e1, col_e2 = st.columns([2, 1])
@@ -960,7 +959,7 @@ if not st.session_state.get("just_locked_cycle", False):
     render_copy_btn("flow_pr", "COPY GOOGLE FLOW 4:3 IMAGE PROMPT", live_flow_prompt)
 
     # ---------------------------------------------------------
-    # 8. STEP 2: UPLOAD FLOW IMAGE -> DEFAULT CROP & STAMP LOGO
+    # 8. STEP 2: UPLOAD FLOW IMAGE -> CROP WATERMARK & STAMP LOGO
     # ---------------------------------------------------------
     st.divider()
     st.markdown("### ✂️ 2. Upload 4:3 Google Flow Image, Crop Watermark & Stamp Logo")
@@ -972,7 +971,7 @@ if not st.session_state.get("just_locked_cycle", False):
 
     col_cr1, col_cr2, col_cr3 = st.columns(3)
     with col_cr1:
-        wm_crop_pct = st.slider("Bottom Watermark Crop %", min_value=0.0, max_value=15.0, value=5.5, step=0.5, help="Default 5.5% removes the Flow watermark cleanly; drag higher if you want to crop more.")
+        wm_crop_pct = st.slider("Bottom Watermark Crop %", min_value=0.0, max_value=15.0, value=8.0, step=0.5, help="Default 8.0% crops the bottom watermark cleanly; drag higher or lower as needed.")
         clean_corner_on = st.checkbox("✨ Extra Corner Blend", value=False, help="Optional extra corner blend if needed.")
     with col_cr2:
         logo_pos_choice = st.selectbox("Brand Logo Placement", ["Bottom-Right (Covers Sparkle)", "Top-Right", "Top-Left", "Bottom-Left", "None"])
@@ -992,7 +991,7 @@ if not st.session_state.get("just_locked_cycle", False):
             logo_pos=logo_pos_choice,
             logo_scale_pct=logo_size_pct
         )
-        st.image(final_im, caption=f"✓ Cropped ({wm_crop_pct:.1f}% bottom) & Logo Master ({final_im.size[0]}×{final_im.size[1]})", use_container_width=True)
+        st.image(final_im, caption=f"✓ Full-Bleed Master ({final_im.size[0]}×{final_im.size[1]} — No Artificial Borders)", use_container_width=True)
 
         col_dl1, col_dl2 = st.columns([3, 1])
         with col_dl1:
@@ -1005,7 +1004,7 @@ if not st.session_state.get("just_locked_cycle", False):
                 except Exception: pass
                 st.rerun()
     else:
-        st.info("👆 Generate your 4:3 image in Google Flow using the prompt above, then upload it here—it auto-crops the watermark by default.")
+        st.info("👆 Generate your 4:3 image in Google Flow using the prompt above, then upload it here to trim the watermark, stamp your logo, and download.")
 
     # ---------------------------------------------------------
     # 9. STEP 3: ENGAGING STORY CAPTION, DISCUSSION QUESTION, EMOJIS & HASHTAGS
@@ -1099,6 +1098,7 @@ if not st.session_state.get("just_locked_cycle", False):
         st.session_state["img_banner"] = f"✓ Scheduled '{ed_head}' for {d_str} @ {sched_time} IST! Ready to generate your next prompt above."
         st.rerun()
 
+
 # ---------------------------------------------------------
 # 11. SCHEDULED QUEUE & EXCEL EXPORT
 # ---------------------------------------------------------
@@ -1121,7 +1121,7 @@ if db.get("scheduled_posts"):
                     <span style="color: #64748B;"> @ </span>
                     <span style="color: #FBBF24;">{item.get('time', '17:30')} IST</span>
                     <div style="color: #F8FAFC; font-weight: 600; margin-top: 2px;">{item.get('headline')}</div>
-                    <div style="color: #94A3B8; font-size: 11px;">Style: {item.get('flow_style', '01_MODERN_WINDOW_APARTMENT')}</div>
+                    <div style="color: #94A3B8; font-size: 11px;">Style: {item.get('flow_style', 'MODERN_EDITORIAL_PHOTO')}</div>
                 </div>
                 <div style="color: #34D399; font-weight: 700; font-size: 11px;">● SCHEDULED</div>
             </div>
