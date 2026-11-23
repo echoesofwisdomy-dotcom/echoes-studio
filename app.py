@@ -467,8 +467,8 @@ def build_google_flow_image_prompt(card_data, flow_style_key="MODERN_EDITORIAL_P
         f"SUBJECT & SCENE: {subject}. "
         f"TYPOGRAPHY & LAYOUT: {style_meta['typo_spec']}, rendered in {pal_meta['desc']}. "
         f"The main headline reads verbatim: \"{headline}\".{sub_clause}{auth_clause} "
-        f"Positioned subtly in the top-left or bottom-left corner (strictly away from the bottom-right corner) is a small, clean brand handle reading \"{handle_str}\". "
-        f"COMPOSITION & QUALITY: Edge-to-edge full-bleed 4:3 framing with NO outer white or cream border frames, generous breathing room around all text so every word is spelled accurately and razor-sharp, no garbled letters, no text overlapping faces, keep the bottom-right corner clear of text, strictly two arms per person, photorealistic 8k."
+        f"Positioned subtly in the top-left corner is a small, clean brand handle reading \"{handle_str}\". "
+        f"COMPOSITION & SAFE ZONE: Keep ALL text, lines, and attributions strictly within the upper and middle 82% of the frame, leaving the bottom 18% completely free of any text or lines so zero cropping is ever required. Edge-to-edge full-bleed 4:3 framing with NO outer border frames, razor-sharp accurate spelling, no text overlapping faces, strictly two arms per person, photorealistic 8k."
     )
 
 def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice="AUTO", palette_choice="AUTO"):
@@ -551,15 +551,16 @@ def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice
     return base, f"Curated Vault • {base.get('author','Wisdom')}"
 
 # ---------------------------------------------------------
-# 5. FULL-BLEED WATERMARK CROPPER, LOGO OVERLAY & EXPORT ENGINE
+# 5. ZERO-CROP SPARKLE REMOVER, LOGO OVERLAY & EXPORT ENGINE
 # ---------------------------------------------------------
 def process_uploaded_flow_image(
     pil_img,
-    bottom_crop_pct=0.05,
+    bottom_crop_pct=0.0,
+    clean_br_corner=True,
     logo_path=None,
     logo_pos="Bottom-Right (Covers Sparkle)",
     logo_scale_pct=11,
-    logo_opacity=0.92,
+    logo_opacity=0.95,
     sharpness_boost=1.05,
     contrast_boost=1.04
 ):
@@ -575,6 +576,16 @@ def process_uploaded_flow_image(
     target_h = int(round(target_w * (h / float(w))))
     im = im.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
+    # Zero-crop bottom-right sparkle removal: sample clean background patch just left of the sparkle & blend smoothly
+    if clean_br_corner and bottom_crop_pct == 0:
+        patch_w = int(target_w * 0.11)
+        patch_h = int(target_h * 0.11)
+        src_box = (target_w - patch_w * 2 - 12, target_h - patch_h, target_w - patch_w - 12, target_h)
+        dst_box = (target_w - patch_w, target_h - patch_h)
+        if src_box[0] > 0 and src_box[1] > 0:
+            clean_patch = im.crop(src_box).transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            im.paste(clean_patch, dst_box)
+
     if logo_path and os.path.exists(logo_path) and logo_pos != "None":
         try:
             lg = Image.open(logo_path).convert("RGBA")
@@ -586,7 +597,7 @@ def process_uploaded_flow_image(
                 alpha = alpha.point(lambda p: int(p * logo_opacity))
                 lg.putalpha(alpha)
 
-            pad = 28
+            pad = 24
             if "Bottom-Right" in logo_pos:
                 pos = (target_w - lw - pad, target_h - lh - pad)
             elif "Bottom-Left" in logo_pos:
@@ -686,14 +697,14 @@ if "active_flow_card" not in st.session_state and os.path.exists(ACTIVE_CARD_PAT
 next_d = get_next_post_date()
 st.markdown("""
 <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC; margin-bottom: 8px;">
-    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.5 // NATIVE 4:3 FULL-BLEED PROMPTS, AUTO-LOGO & HIGH-COMMENT STORIES</span>
+    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.6 // ZERO-CROP SPARKLE REMOVER, SAFE-ZONE 4:3 PROMPTS & AUTO-LOGO</span>
 </div>
 """, unsafe_allow_html=True)
 
 active_logo = find_active_logo_path()
 st.markdown(f"""
 <div style="margin-bottom: 14px;">
-    <span class="badge badge-green">● NATIVE 4:3 FULL-BLEED (NO BORDERS)</span>
+    <span class="badge badge-green">● ZERO-CROP FULL-BLEED 4:3</span>
     <span class="badge badge-purple">🏛️ 15+ LEADERS & THINKERS</span>
     <span class="badge badge-blue">{'✓ BRAND LOGO READY' if active_logo else '🖼️ UPLOAD LOGO BELOW'}</span>
     <span class="badge badge-amber">📅 NEXT SLOT: {next_d} @ {db.get('post_time', '17:30')} IST</span>
@@ -721,10 +732,10 @@ with st.expander("🔑 API CREDENTIALS, BRAND LOGO VAULT & HANDLE", expanded=(no
             save_persistent_guide_url(ug)
 
     st.divider()
-    st.markdown("#### 🏛️ Persistent Brand Logo (Auto-Stamped in App — Easier & Cleaner Than Flow)")
+    st.markdown("#### 🏛️ Persistent Brand Logo (Auto-Stamped in App — Zero Cropping Needed)")
     col_lg1, col_lg2 = st.columns([2, 1])
     with col_lg1:
-        logo_up = st.file_uploader("Upload Transparent PNG Logo (Saved permanently in vault)", type=["png", "webp", "jpg"], key="v45_logo_up")
+        logo_up = st.file_uploader("Upload Transparent PNG Logo (Saved permanently in vault)", type=["png", "webp", "jpg"], key="v46_logo_up")
         if logo_up:
             with open(SAVED_LOGO_PATH, "wb") as lf:
                 lf.write(logo_up.read())
@@ -734,7 +745,7 @@ with st.expander("🔑 API CREDENTIALS, BRAND LOGO VAULT & HANDLE", expanded=(no
         cur_lg = find_active_logo_path()
         if cur_lg:
             st.image(cur_lg, caption="Active Logo", width=95)
-            if st.button("🗑️ Remove Logo", key="v45_rm_logo"):
+            if st.button("🗑️ Remove Logo", key="v46_rm_logo"):
                 if os.path.exists(SAVED_LOGO_PATH):
                     try: os.remove(SAVED_LOGO_PATH)
                     except Exception: pass
@@ -778,7 +789,7 @@ with col_p3:
 col_btn1, col_btn2 = st.columns([2, 1])
 with col_btn1:
     if st.button("🚀 Generate Fresh 4:3 Flow Prompt", type="primary", use_container_width=True):
-        with st.spinner("⚡ Crafting full-bleed 4:3 Google Flow prompt with embedded typography & leader wisdom..."):
+        with st.spinner("⚡ Crafting full-bleed 4:3 Google Flow prompt with safe-zone margins & leader wisdom..."):
             card, src = synthesize_flow_card_package(get_persistent_api_key(), chosen_pillar, chosen_style, chosen_palette)
             st.session_state["active_flow_card"] = card
             st.session_state["active_flow_src"] = src
@@ -825,14 +836,14 @@ edited_card_for_prompt = {
 }
 live_flow_prompt = build_google_flow_image_prompt(edited_card_for_prompt, resolved_style, resolved_pal, ed_handle)
 
-st.text_area("📋 Copy & Paste This Prompt Into Google Flow (Select 4:3 — Full-Bleed, Zero Borders)", live_flow_prompt, height=155)
+st.text_area("📋 Copy & Paste This Prompt Into Google Flow (Select 4:3 — Full-Bleed, Bottom Safe Zone)", live_flow_prompt, height=155)
 render_copy_btn("flow_pr", "COPY GOOGLE FLOW 4:3 IMAGE PROMPT", live_flow_prompt)
 
 # ---------------------------------------------------------
-# 8. STEP 2: UPLOAD FLOW IMAGE -> CROP WATERMARK & STAMP LOGO
+# 8. STEP 2: UPLOAD FLOW IMAGE -> ZERO-CROP SPARKLE REMOVE & LOGO STAMP
 # ---------------------------------------------------------
 st.divider()
-st.markdown("### ✂️ 2. Upload 4:3 Google Flow Image, Crop Watermark & Stamp Logo")
+st.markdown("### ✨ 2. Upload 4:3 Google Flow Image, Remove Sparkle & Stamp Logo")
 
 uploaded_flow_img = st.file_uploader("Upload your 4:3 image generated from Google Flow", type=["png", "jpg", "jpeg", "webp"])
 if uploaded_flow_img:
@@ -841,7 +852,8 @@ if uploaded_flow_img:
 
 col_cr1, col_cr2, col_cr3 = st.columns(3)
 with col_cr1:
-    wm_crop_pct = st.slider("Bottom Watermark Crop %", min_value=0.0, max_value=12.0, value=4.5, step=0.5, help="Trims the bottom edge cleanly while keeping native full-bleed framing (no borders added).")
+    clean_corner_on = st.checkbox("✨ Zero-Crop Sparkle Remover", value=True, help="Removes the bottom-right Google Flow sparkle without cropping a single pixel of your image.")
+    wm_crop_pct = st.slider("Optional Bottom Crop %", min_value=0.0, max_value=10.0, value=0.0, step=0.5, help="Keep at 0.0% so nothing is cut off.")
 with col_cr2:
     logo_pos_choice = st.selectbox("Brand Logo Placement", ["Bottom-Right (Covers Sparkle)", "Top-Right", "Top-Left", "Bottom-Left", "None"])
 with col_cr3:
@@ -855,11 +867,12 @@ if os.path.exists(SAVED_FLOW_IMG_PATH):
     final_im = process_uploaded_flow_image(
         raw_im,
         bottom_crop_pct=wm_crop_pct / 100.0,
+        clean_br_corner=clean_corner_on,
         logo_path=find_active_logo_path(),
         logo_pos=logo_pos_choice,
         logo_scale_pct=logo_size_pct
     )
-    st.image(final_im, caption=f"✓ Full-Bleed Master ({final_im.size[0]}×{final_im.size[1]} — No Artificial Borders)", use_container_width=True)
+    st.image(final_im, caption=f"✓ Zero-Crop Full-Bleed Master ({final_im.size[0]}×{final_im.size[1]})", use_container_width=True)
 
     col_dl1, col_dl2 = st.columns([3, 1])
     with col_dl1:
@@ -872,7 +885,7 @@ if os.path.exists(SAVED_FLOW_IMG_PATH):
             except Exception: pass
             st.rerun()
 else:
-    st.info("👆 Generate your 4:3 image in Google Flow using the prompt above, then upload it here to trim the watermark, stamp your logo, and download.")
+    st.info("👆 Generate your 4:3 image in Google Flow using the prompt above, then upload it here—no cropping needed.")
 
 # ---------------------------------------------------------
 # 9. STEP 3: ENGAGING STORY CAPTION, DISCUSSION QUESTION, EMOJIS & HASHTAGS
