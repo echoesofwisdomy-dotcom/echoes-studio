@@ -439,7 +439,7 @@ FLOW_CURATED_VAULT = [
 ]
 
 # ---------------------------------------------------------
-# 4. GOOGLE FLOW PROMPT ARCHITECT (4:5 FEED MASTER)
+# 4. GOOGLE FLOW PROMPT ARCHITECT (3:4 -> 4:5 FEED MASTER)
 # ---------------------------------------------------------
 def build_google_flow_image_prompt(card_data, flow_style_key="MODERN_EDITORIAL_PHOTO", palette_key="IMPERIAL_GOLD", handle_str="@EchoesOfWisdomOfficial"):
     style_meta = FLOW_VISUAL_STYLES.get(flow_style_key, FLOW_VISUAL_STYLES["MODERN_EDITORIAL_PHOTO"])
@@ -454,12 +454,12 @@ def build_google_flow_image_prompt(card_data, flow_style_key="MODERN_EDITORIAL_P
     auth_clause = f' Below the text is a thin accent divider line and subtle attribution reading: "— {author}".' if author else ""
 
     return (
-        f"[4:5 vertical 1080x1350 social media feed graphic] {style_meta['art_spec']}. "
+        f"[3:4 vertical portrait social media graphic] {style_meta['art_spec']}. "
         f"SUBJECT & SCENE: {subject}. "
         f"TYPOGRAPHY & LAYOUT: {style_meta['typo_spec']}, rendered in {pal_meta['desc']}. "
         f"The main headline reads verbatim: \"{headline}\".{sub_clause}{auth_clause} "
-        f"In the bottom margin is a small, clean, subtle watermark reading \"{handle_str}\". "
-        f"COMPOSITION & QUALITY: Balanced 4:5 editorial framing with generous breathing room around all text so every word is spelled accurately and razor-sharp, no garbled letters, no text overlapping faces, strictly two arms per person, photorealistic 8k."
+        f"Above the bottom safe zone is a small, clean, subtle attribution handle reading \"{handle_str}\". "
+        f"COMPOSITION & QUALITY: Balanced 3:4 vertical framing with generous top and bottom margins (keep bottom 12% clear of important text for clean watermark cropping and 4:5 feed conversion) so every word is spelled accurately and razor-sharp, no garbled letters, no text overlapping faces, strictly two arms per person, photorealistic 8k."
     )
 
 def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice="AUTO", palette_choice="AUTO"):
@@ -490,16 +490,16 @@ def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice
     pal_meta = COLOR_PALETTES.get(resolved_pal, COLOR_PALETTES["IMPERIAL_GOLD"])
 
     ai_prompt = (
-        f"You are Executive Creative Director for 'Echoes of Wisdom' (Facebook & Instagram 4:5 Feed Posts for men aged 35-65+ in US, UK, Canada, Australia).\n"
+        f"You are Executive Creative Director for 'Echoes of Wisdom' (Facebook & Instagram Feed Posts for men aged 35-65+ in US, UK, Canada, Australia).\n"
         f"TARGET PILLAR: {pillar_label}\n"
         f"VISUAL FORMAT FOR GOOGLE FLOW: {style_meta['label']} — {style_meta['art_spec']}\n"
         f"TYPOGRAPHY STYLE FOR GOOGLE FLOW: {style_meta['typo_spec']} in {pal_meta['desc']}\n"
         f"LEADER / THINKER PRINCIPLE: {leader_pick['leader']} ({leader_pick['era']}) — {leader_pick['principle']}\n"
         f"FORBIDDEN HEADLINES: {', '.join(used_heads) if used_heads else 'None'}\n"
         f"STRICT RULES:\n"
-        f"1. Create a fresh, thought-provoking, share-worthy 4:5 feed post inspired by {leader_pick['leader']} or a sharp modern-vs-ancient life insight.\n"
+        f"1. Create a fresh, thought-provoking, share-worthy 3:4 portrait feed post inspired by {leader_pick['leader']} or a sharp modern-vs-ancient life insight.\n"
         f"2. HEADLINE: 4 to 10 crisp, punchy words to render on the image (easy for Google Flow to spell accurately).\n"
-        f"3. SUBTEXT: 1 short supporting sentence (6 to 14 words) or 5 ultra-short numbered items if using a checklist style.\n"
+        f"3. SUBTEXT: 1 short supporting sentence (6 to 14 words) or 5 ultra-short numbered points if using a checklist style.\n"
         f"4. VISUAL_SUBJECT: Vivid scene description (alternate between modern everyday realism like sunlit city apartment, coffee desk, rainy dusk street and classic/ancient scenes).\n"
         f"5. REFLECTION_PROMPT: Authentic, open-ended question inviting a real comment (ZERO engagement bait like 'Drop 1 or 2' or 'Comment YES').\n"
         f"6. CAPTION_STORY: 3 compelling sentences expanding the insight.\n"
@@ -542,7 +542,7 @@ def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice
     return base, f"Curated Vault • {base.get('author','Wisdom')}"
 
 # ---------------------------------------------------------
-# 5. WATERMARK CROPPER & 4:5 / 9:16 EXPORT ENGINE
+# 5. WATERMARK CROPPER & 4:5 / 4:3 / 9:16 EXPORT ENGINE
 # ---------------------------------------------------------
 def process_uploaded_flow_image(pil_img, bottom_crop_pct=0.065, target_ratio_mode="4:5 Feed Portrait (1080×1350)", sharpness_boost=1.05, contrast_boost=1.04):
     im = pil_img.convert("RGB")
@@ -556,22 +556,34 @@ def process_uploaded_flow_image(pil_img, bottom_crop_pct=0.065, target_ratio_mod
         target_w, target_h = 1080, 1920
     elif "1:1" in target_ratio_mode:
         target_w, target_h = 1080, 1080
+    elif "4:3" in target_ratio_mode:
+        target_w, target_h = 1440, 1080
     else:
         target_w, target_h = 1080, 1350
 
     target_aspect = target_w / float(target_h)
     curr_aspect = w / float(h)
 
-    if curr_aspect > target_aspect:
-        crop_w = int(h * target_aspect)
-        x0 = (w - crop_w) // 2
-        im = im.crop((x0, 0, x0 + crop_w, h))
+    # If input is wide (e.g., 4:3) and target is portrait/square, fit & pad using edge border color so text is NEVER sliced off
+    if curr_aspect > target_aspect * 1.15:
+        border_px = im.getpixel((min(10, w - 1), min(10, h - 1)))
+        canvas = Image.new("RGB", (target_w, target_h), border_px)
+        new_w = target_w
+        new_h = int(target_w / curr_aspect)
+        resized = im.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        canvas.paste(resized, (0, (target_h - new_h) // 2))
+        im = canvas
     else:
-        crop_h = int(w / target_aspect)
-        y0 = max(0, (h - crop_h) // 4)
-        im = im.crop((0, y0, w, y0 + crop_h))
+        if curr_aspect > target_aspect:
+            crop_w = int(h * target_aspect)
+            x0 = (w - crop_w) // 2
+            im = im.crop((x0, 0, x0 + crop_w, h))
+        else:
+            crop_h = int(w / target_aspect)
+            y0 = max(0, (h - crop_h) // 4)
+            im = im.crop((0, y0, w, y0 + crop_h))
+        im = im.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-    im = im.resize((target_w, target_h), Image.Resampling.LANCZOS)
     if contrast_boost != 1.0:
         im = ImageEnhance.Contrast(im).enhance(contrast_boost)
     if sharpness_boost != 1.0:
@@ -657,13 +669,13 @@ if "active_flow_card" not in st.session_state and os.path.exists(ACTIVE_CARD_PAT
 next_d = get_next_post_date()
 st.markdown("""
 <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC; margin-bottom: 8px;">
-    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.1 // GOOGLE FLOW PROMPT ARCHITECT, WATERMARK CROPPER & METADATA SUITE</span>
+    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.3 // 3:4 & 4:3 GOOGLE FLOW SUPPORT, SAFE-MARGIN CROPPER & METADATA SUITE</span>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown(f"""
 <div style="margin-bottom: 14px;">
-    <span class="badge badge-green">● GOOGLE FLOW 4:5 PROMPTS</span>
+    <span class="badge badge-green">● GOOGLE FLOW 3:4 PROMPTS (4:5 READY)</span>
     <span class="badge badge-purple">🏛️ 15+ LEADERS & THINKERS</span>
     <span class="badge badge-blue">✂️ WATERMARK CROPPER</span>
     <span class="badge badge-amber">📅 NEXT SLOT: {next_d} @ {db.get('post_time', '17:30')} IST</span>
@@ -775,7 +787,7 @@ edited_card_for_prompt = {
 }
 live_flow_prompt = build_google_flow_image_prompt(edited_card_for_prompt, resolved_style, resolved_pal, ed_handle)
 
-st.text_area("📋 Copy & Paste This Prompt Into Google Flow / Imagen (Includes Artwork + Text Overlay)", live_flow_prompt, height=155)
+st.text_area("📋 Copy & Paste This Prompt Into Google Flow / Imagen (Select 3:4 Portrait)", live_flow_prompt, height=155)
 render_copy_btn("flow_pr", "COPY GOOGLE FLOW IMAGE PROMPT", live_flow_prompt)
 
 # ---------------------------------------------------------
@@ -786,19 +798,19 @@ st.markdown("### ✂️ 2. Upload Google Flow Image & Crop Watermark")
 
 col_up1, col_up2 = st.columns([2, 1])
 with col_up1:
-    uploaded_flow_img = st.file_uploader("Upload your image generated from Google Flow", type=["png", "jpg", "jpeg", "webp"])
+    uploaded_flow_img = st.file_uploader("Upload your 3:4 or 4:3 image generated from Google Flow", type=["png", "jpg", "jpeg", "webp"])
     if uploaded_flow_img:
         with open(SAVED_FLOW_IMG_PATH, "wb") as sf:
             sf.write(uploaded_flow_img.read())
 with col_up2:
     target_aspect_choice = st.selectbox(
         "Output Aspect Ratio",
-        ["4:5 Feed Portrait (1080×1350)", "9:16 Story / Reel Cover (1080×1920)", "1:1 Square Post (1080×1080)"]
+        ["4:5 Feed Portrait (1080×1350)", "4:3 Native Feed (1440×1080)", "1:1 Square Post (1080×1080)", "9:16 Story / Reel Cover (1080×1920)"]
     )
 
 col_cr1, col_cr2, col_cr3 = st.columns(3)
 with col_cr1:
-    wm_crop_pct = st.slider("Bottom Watermark Crop %", min_value=0.0, max_value=15.0, value=6.5, step=0.5, help="6.5% removes the bottom-right Flow/Imagen watermark cleanly.")
+    wm_crop_pct = st.slider("Bottom Watermark Crop %", min_value=0.0, max_value=15.0, value=6.5, step=0.5, help="6.5% removes the bottom-right Flow watermark and converts 3:4 directly into 4:5.")
 with col_cr2:
     contrast_val = st.slider("Contrast Polish", min_value=0.90, max_value=1.25, value=1.04, step=0.02)
 with col_cr3:
@@ -829,7 +841,7 @@ if os.path.exists(SAVED_FLOW_IMG_PATH):
             except Exception: pass
             st.rerun()
 else:
-    st.info("👆 Generate your image in Google Flow using the prompt above, then upload it here to crop the watermark and download the clean master.")
+    st.info("👆 Generate your 3:4 image in Google Flow using the prompt above, then upload it here to crop the watermark and download the clean 4:5 master.")
 
 # ---------------------------------------------------------
 # 9. STEP 3: PROVOCATIVE CAPTION, EMOJIS, HASHTAGS & FIRST COMMENT
