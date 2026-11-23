@@ -260,7 +260,7 @@ def get_next_post_date():
     return now_ist.date().strftime("%Y-%m-%d")
 
 # ---------------------------------------------------------
-# 3. 8 DISTINCT FULL-BLEED 4:3 GOOGLE FLOW STYLES, 6 PALETTES & LEADERS
+# 3. 28 DISTINCT FULL-BLEED 4:3 GOOGLE FLOW STYLES, 6 PALETTES & LEADERS
 # ---------------------------------------------------------
 PILLAR_DEFINITIONS = {
     "ALL": "🎲 Smart AI Rotation (All 5 Pillars)",
@@ -413,6 +413,7 @@ FLOW_VISUAL_STYLES = {
         "art_spec": "full-bleed long-exposure photograph of a lone silhouette standing on a dark ridge beneath a crystal-clear Milky Way night sky"
     }
 }
+
 COLOR_PALETTES = {
     "IMPERIAL_GOLD":  {"label": "👑 Imperial Gold & Obsidian",   "desc": "radiant imperial gold and crisp ivory-white lettering against deep obsidian shadows"},
     "GLACIAL_ICE":    {"label": "❄️ Glacial Cyan & Steel",       "desc": "frost glacial cyan and pure white lettering against cool steel-blue shadows"},
@@ -444,7 +445,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MODERN_MONEY",
         "pillar": "FINANCE",
-        "flow_style": "MODERN_EDITORIAL_PHOTO",
+        "flow_style": "01_MODERN_WINDOW_APARTMENT",
         "palette": "EMERALD_BONE",
         "headline": "NOBODY PAYS YOUR BILLS OUT OF SYMPATHY",
         "subtext": "Quiet savings buy the freedom to say no without panic.",
@@ -457,7 +458,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_LINCOLN_AXE",
         "pillar": "LEGACY",
-        "flow_style": "WARM_PARCHMENT_PORTRAIT",
+        "flow_style": "05_ENGRAVED_PORTRAIT_PARCHMENT",
         "palette": "CRIMSON_IVORY",
         "headline": "SHARPEN THE AXE BEFORE YOU SWING",
         "subtext": "Four hours of quiet preparation prevent four months of regret.",
@@ -470,7 +471,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_FRANKL_PAUSE",
         "pillar": "SOVEREIGNTY",
-        "flow_style": "SACRED_GEOMETRY_MYTHIC",
+        "flow_style": "07_SACRED_GEOMETRY_SHADOW",
         "palette": "GLACIAL_ICE",
         "headline": "BETWEEN PROVOCATION AND REACTION LIES YOUR FREEDOM",
         "subtext": "Lose your temper, and a stranger becomes your master.",
@@ -483,7 +484,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_ROOSEVELT_ARENA",
         "pillar": "SOVEREIGNTY",
-        "flow_style": "MONOCHROME_GRIT_SCENE",
+        "flow_style": "04_MONOCHROME_STREET_GRIT",
         "palette": "FORGE_AMBER",
         "headline": "IGNORE THE CRITICS. STAY IN THE ARENA.",
         "subtext": "People who build nothing always have plenty of advice.",
@@ -496,7 +497,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MANDELA_POISON",
         "pillar": "LONGEVITY",
-        "flow_style": "STORYBOOK_WARM_ILLUSTRATION",
+        "flow_style": "06_STORYBOOK_MARKER_HIGHLIGHT",
         "palette": "ROYAL_VIOLET",
         "headline": "BITTERNESS ONLY POISONS THE ONE WHO CARRIES IT",
         "subtext": "Let go of old grudges to reclaim your peace after forty.",
@@ -509,7 +510,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_FIVE_SILENT_PLACES",
         "pillar": "PARABLES",
-        "flow_style": "NUMBERED_CHECKLIST_POSTER",
+        "flow_style": "08_FIVE_POINT_CHECKLIST",
         "palette": "IMPERIAL_GOLD",
         "headline": "5 PLACES TO STAY SILENT AT ALL COSTS:",
         "subtext": "1. When anger wants the first word. 2. When you lack full facts. 3. When baited into a fight. 4. When plans are unfinished. 5. When actions prove it better.",
@@ -522,7 +523,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MUSASHI_CRAFT",
         "pillar": "LEGACY",
-        "flow_style": "CLASSIC_OIL_RELIEF",
+        "flow_style": "02_CLASSIC_OIL_CHIAROSCURO",
         "palette": "IMPERIAL_GOLD",
         "headline": "MASTER ONE CRAFT DEEPLY",
         "subtext": "Deep skill in one discipline builds clarity across your entire life.",
@@ -535,7 +536,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MUNGER_FOLLY",
         "pillar": "FINANCE",
-        "flow_style": "DARK_MINIMAL_TYPO",
+        "flow_style": "03_MINIMAL_OBSIDIAN_POSTER",
         "palette": "GLACIAL_ICE",
         "headline": "CONSISTENTLY AVOID FOOLISH MISTAKES",
         "subtext": "Long-term advantage comes from protecting your downside first.",
@@ -550,8 +551,9 @@ FLOW_CURATED_VAULT = [
 # ---------------------------------------------------------
 # 4. GOOGLE FLOW PROMPT ARCHITECT (NATIVE 4:3 FULL-BLEED)
 # ---------------------------------------------------------
-def build_google_flow_image_prompt(card_data, flow_style_key="MODERN_EDITORIAL_PHOTO", palette_key="IMPERIAL_GOLD", handle_str="@EchoesOfWisdomOfficial"):
-    style_meta = FLOW_VISUAL_STYLES.get(flow_style_key, FLOW_VISUAL_STYLES["MODERN_EDITORIAL_PHOTO"])
+def build_google_flow_image_prompt(card_data, flow_style_key="01_MODERN_WINDOW_APARTMENT", palette_key="IMPERIAL_GOLD", handle_str="@EchoesOfWisdomOfficial"):
+    default_meta = next(iter(FLOW_VISUAL_STYLES.values()))
+    style_meta = FLOW_VISUAL_STYLES.get(flow_style_key, default_meta)
     pal_meta = COLOR_PALETTES.get(palette_key, COLOR_PALETTES["IMPERIAL_GOLD"])
 
     headline = card_data.get("headline", "").strip()
@@ -601,8 +603,9 @@ def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice
         base["flow_prompt"] = build_google_flow_image_prompt(base, resolved_style, resolved_pal, handle_str)
         return base, f"Curated Vault • {base.get('author','Wisdom')}"
 
+    default_meta = next(iter(FLOW_VISUAL_STYLES.values()))
     pillar_label = PILLAR_DEFINITIONS.get(base["pillar"], "Silent Power")
-    style_meta = FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES["MODERN_EDITORIAL_PHOTO"])
+    style_meta = FLOW_VISUAL_STYLES.get(resolved_style, default_meta)
     pal_meta = COLOR_PALETTES.get(resolved_pal, COLOR_PALETTES["IMPERIAL_GOLD"])
 
     ai_prompt = (
@@ -683,7 +686,6 @@ def process_uploaded_flow_image(
     target_h = int(round(target_w * (h / float(w))))
     im = im.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-    # Zero-crop bottom-right sparkle removal: sample clean background patch just left of the sparkle & blend smoothly
     if clean_br_corner and bottom_crop_pct == 0:
         patch_w = int(target_w * 0.11)
         patch_h = int(target_h * 0.11)
@@ -807,7 +809,7 @@ if not st.session_state.get("just_locked_cycle") and "active_flow_card" not in s
 next_d = get_next_post_date()
 st.markdown("""
 <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC; margin-bottom: 8px;">
-    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.10 // KEYERROR FIX, 8.0% DEFAULT WATERMARK CROP & 28 VISUAL STYLES</span>
+    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.11 // FULL KEYERROR FIX, 8.0% DEFAULT WATERMARK CROP & 28 VISUAL STYLES</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -867,6 +869,7 @@ if vault_hist:
         v_labels = [f"🖼️ {v.get('headline','Prompt')} — {v.get('author','')} ({v.get('flow_style','')})" for v in vault_hist]
         v_idx = st.selectbox("Select Saved Prompt", range(len(vault_hist)), format_func=lambda i: v_labels[i], key="img_vault_sel")
         if st.button("🔄 Restore Selected Prompt", key="img_vault_btn"):
+            st.session_state["just_locked_cycle"] = False
             st.session_state["active_flow_card"] = vault_hist[v_idx]
             st.session_state["active_flow_src"] = "Saved Vault"
             save_active_card_to_disk(vault_hist[v_idx], "Saved Vault")
@@ -1126,7 +1129,7 @@ if db.get("scheduled_posts"):
                     <span style="color: #64748B;"> @ </span>
                     <span style="color: #FBBF24;">{item.get('time', '17:30')} IST</span>
                     <div style="color: #F8FAFC; font-weight: 600; margin-top: 2px;">{item.get('headline')}</div>
-                    <div style="color: #94A3B8; font-size: 11px;">Style: {item.get('flow_style', 'MODERN_EDITORIAL_PHOTO')}</div>
+                    <div style="color: #94A3B8; font-size: 11px;">Style: {item.get('flow_style', '01_MODERN_WINDOW_APARTMENT')}</div>
                 </div>
                 <div style="color: #34D399; font-weight: 700; font-size: 11px;">● SCHEDULED</div>
             </div>
