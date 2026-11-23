@@ -201,6 +201,7 @@ def load_db():
         "scheduled_posts": [],
         "used_headlines": [],
         "used_card_ids": [],
+        "used_styles": [],
         "last_date": None,
         "post_time": "17:30"
     }
@@ -259,7 +260,7 @@ def get_next_post_date():
     return now_ist.date().strftime("%Y-%m-%d")
 
 # ---------------------------------------------------------
-# 3. 8 DISTINCT FULL-BLEED 4:3 GOOGLE FLOW STYLES, 6 PALETTES & LEADERS
+# 3. 28 DISTINCT FULL-BLEED 4:3 GOOGLE FLOW STYLES, 6 PALETTES & LEADERS
 # ---------------------------------------------------------
 PILLAR_DEFINITIONS = {
     "ALL": "🎲 Smart AI Rotation (All 5 Pillars)",
@@ -271,45 +272,145 @@ PILLAR_DEFINITIONS = {
 }
 
 FLOW_VISUAL_STYLES = {
-    "MODERN_EDITORIAL_PHOTO": {
-        "label": "🏙️ Modern Lifestyle Photo + Clean Sans-Serif Overlay",
-        "typo_spec": "clean ultra-bold modern white and emerald-green sans-serif typography arranged in the upper-left negative space with crisp legibility and zero outer borders",
-        "art_spec": "full-bleed photorealistic 35mm editorial lifestyle photograph in natural window light (modern apartment, quiet cafe desk, or dusk street) with shallow depth of field"
+    "01_MODERN_WINDOW_APARTMENT": {
+        "label": "01. 🏙️ Modern Window Apartment + Clean Sans-Serif",
+        "typo_spec": "ultra-bold modern white and emerald-green sans-serif typography arranged cleanly in the upper-left negative space",
+        "art_spec": "full-bleed 35mm editorial lifestyle photograph of a thoughtful person beside a tall apartment window overlooking a sunlit city at morning"
     },
-    "CLASSIC_OIL_RELIEF": {
-        "label": "🏛️ Full-Bleed Classical Oil Painting + Gold Serif Typography",
-        "typo_spec": "bold chiseled gold serif typography centered in the upper third with subtle dark drop shadow and thin horizontal gold divider lines",
-        "art_spec": "edge-to-edge museum-grade chiaroscuro oil painting with dramatic golden-hour rim lighting, rich shadows, and fine canvas texture, no outer border"
+    "02_CLASSIC_OIL_CHIAROSCURO": {
+        "label": "02. 🏛️ Classical Chiaroscuro Oil Painting + Gold Serif",
+        "typo_spec": "bold chiseled gold serif typography centered in the upper third with subtle drop shadow and thin horizontal gold divider lines",
+        "art_spec": "edge-to-edge museum-grade chiaroscuro oil painting with dramatic golden-hour rim lighting, deep shadows, and fine canvas texture"
     },
-    "DARK_MINIMAL_TYPO": {
-        "label": "✍️ Minimal Obsidian Poster + Highlighted Gold/Cyan Key Words",
+    "03_MINIMAL_OBSIDIAN_POSTER": {
+        "label": "03. ✍️ Minimal Obsidian Poster + Highlighted Power Words",
         "typo_spec": "high-contrast editorial serif typography on a matte obsidian-black background with thin geometric corner brackets and key power words highlighted in glowing gold",
-        "art_spec": "full-bleed minimalist dark charcoal studio backdrop with subtle radial rim light, faint geometric lines, and zero visual clutter"
+        "art_spec": "full-bleed minimalist dark charcoal studio backdrop with subtle radial rim light and faint geometric lines"
     },
-    "MONOCHROME_GRIT_SCENE": {
-        "label": "🖤 Stark Black-and-White Documentary + Bold White & Red Text",
-        "typo_spec": "bold condensed white sans-serif typography with a single vivid crimson-red accent word, positioned cleanly in open sky or shadow space",
-        "art_spec": "full-bleed stark high-contrast black-and-white 35mm documentary photography with dramatic mist, natural film grain, and moody silhouettes"
+    "04_MONOCHROME_STREET_GRIT": {
+        "label": "04. 🖤 Stark Monochrome Street Documentary + White & Red Text",
+        "typo_spec": "bold condensed white sans-serif typography with a single vivid crimson-red accent word, positioned cleanly in open shadow space",
+        "art_spec": "full-bleed high-contrast black-and-white 35mm street documentary photograph with mist, natural film grain, and moody silhouettes"
     },
-    "WARM_PARCHMENT_PORTRAIT": {
-        "label": "📜 Vintage Engraved Portrait + Crimson & Charcoal Serif",
+    "05_ENGRAVED_PORTRAIT_PARCHMENT": {
+        "label": "05. 📜 Vintage Engraved Portrait + Crimson & Charcoal Serif",
         "typo_spec": "refined crimson-red and charcoal editorial serif typography printed cleanly on warm textured paper on the left half",
         "art_spec": "detailed vintage engraved studio portrait of a wise thinker or mentor on the right half in balanced 4:3 horizontal composition"
     },
-    "STORYBOOK_WARM_ILLUSTRATION": {
-        "label": "💛 Warm Hand-Painted Illustration + Highlighted Lead-In",
-        "typo_spec": "bold dark serif typography with a warm marker highlight behind the opening phrase positioned cleanly in the upper sky/open area",
-        "art_spec": "edge-to-edge expressive warm hand-painted illustration of a peaceful traveler in golden rain or sunlit hills with rich color harmony, no borders"
+    "06_STORYBOOK_MARKER_HIGHLIGHT": {
+        "label": "06. 💛 Warm Hand-Painted Illustration + Marker Highlight",
+        "typo_spec": "bold dark serif typography with a warm marker highlight behind the opening phrase positioned cleanly in the upper sky area",
+        "art_spec": "edge-to-edge expressive warm hand-painted illustration of a peaceful traveler in golden rain or sunlit hills with rich color harmony"
     },
-    "SACRED_GEOMETRY_MYTHIC": {
-        "label": "🔺 Sacred Geometry Emblem + Symbolic Silhouette (Dark Slate)",
-        "typo_spec": "spaced uppercase typewriter-monospace silver-white typography framed by subtle geometric compass lines and a minimal horizon accent",
-        "art_spec": "full-bleed moody dark slate symbolic artwork featuring a lone figure casting a poised lion shadow or standing at a misty fork in the road"
+    "07_SACRED_GEOMETRY_SHADOW": {
+        "label": "07. 🔺 Sacred Geometry Compass + Symbolic Lion Shadow",
+        "typo_spec": "spaced uppercase typewriter-monospace silver-white typography framed by subtle geometric compass lines",
+        "art_spec": "full-bleed moody dark slate symbolic artwork featuring a lone figure casting a poised lion shadow in morning mist"
     },
-    "NUMBERED_CHECKLIST_POSTER": {
-        "label": "📋 Clean 5-Point Behavioral Checklist Poster",
-        "typo_spec": "bold uppercase header with a thin gold underline followed by 5 cleanly aligned numbered points (1 to 5) with circular gold number badges on a dark textured slate background",
-        "art_spec": "full-bleed dark architectural stone and soft volumetric light background behind clean structured typography"
+    "08_FIVE_POINT_CHECKLIST": {
+        "label": "08. 📋 5-Point Behavioral Checklist + Gold Number Badges",
+        "typo_spec": "bold uppercase header with a thin gold underline followed by 5 cleanly aligned numbered points (1 to 5) with circular gold number badges",
+        "art_spec": "full-bleed dark architectural stone and soft volumetric light beam backdrop behind structured typography"
+    },
+    "09_SPLIT_CONTRAST_COMPARISON": {
+        "label": "09. 🔀 Two-Side Contrast Card (What Drains vs. What Builds)",
+        "typo_spec": "clean split-screen comparison typography with two contrasting rounded dark cards side by side in the upper-middle frame",
+        "art_spec": "full-bleed atmospheric dusk twilight backdrop with subtle depth and clean visual separation"
+    },
+    "10_RAINY_CAFE_REFLECTION": {
+        "label": "10. ☕ Rainy Cafe Window & Coffee Notebook + Warm Serif",
+        "typo_spec": "warm ivory serif typography with subtle drop shadow placed cleanly in the upper-right dark interior space",
+        "art_spec": "full-bleed cozy 35mm photograph of a steaming ceramic coffee mug and leather notebook beside a rain-streaked cafe window at twilight"
+    },
+    "11_MOUNTAIN_SUMMIT_DAWN": {
+        "label": "11. 🏔️ Alpine Granite Ridge at Sunrise + Condensed Block",
+        "typo_spec": "tall condensed bone-white and amber block lettering centered in the clear morning sky above the mountain ridge",
+        "art_spec": "full-bleed cinematic wide-angle photograph of a lone hiker standing on a sunlit alpine granite ridge above a sea of morning clouds"
+    },
+    "12_JAPANESE_INK_SUMI": {
+        "label": "12. 🎋 Japanese Sumi-e Brush Ink & Red Seal + Minimal Serif",
+        "typo_spec": "crisp charcoal serif typography with a small vermilion-red square stamp accent on textured off-white rice paper",
+        "art_spec": "minimalist Japanese sumi-e ink wash painting of bamboo leaves and misty mountain peaks with generous negative space"
+    },
+    "13_ARCHITECTURAL_BRUTALISM": {
+        "label": "13. 🏗️ Concrete & Sunlight Geometry + Industrial Sans",
+        "typo_spec": "sharp geometric white and electric-cyan sans-serif typography aligned with dramatic architectural shadow lines",
+        "art_spec": "full-bleed minimalist architectural photograph of raw concrete colonnades and sharp diagonal shafts of golden sunlight"
+    },
+    "14_VINTAGE_LIBRARY_STUDY": {
+        "label": "14. 📚 Candlelit Wood-Paneled Library + Antique Gold Serif",
+        "typo_spec": "classic antique gold serif typography framed by thin ornamental rules in the shadowed upper left",
+        "art_spec": "full-bleed warm atmospheric photograph of an old wood-paneled study with leather-bound books, brass desk lamp, and antique globe"
+    },
+    "15_COASTAL_LIGHTHOUSE_STORM": {
+        "label": "15. 🌊 Stormy Coastal Lighthouse + High-Contrast White Block",
+        "typo_spec": "bold weather-worn white block typography with subtle slate shadow in the dark stormy sky",
+        "art_spec": "full-bleed dramatic seascape photograph of a solitary stone lighthouse holding a steady beam through crashing ocean waves and mist"
+    },
+    "16_FORGE_ANVIL_SPARKS": {
+        "label": "16. 🔨 Blacksmith Forge & Glowing Steel + Molten Amber Type",
+        "typo_spec": "heavy chiseled molten-amber and white slab-serif typography in the dark upper workshop space",
+        "art_spec": "full-bleed dramatic close-up photograph of glowing hot steel on an anvil with golden sparks flying in a dark stone forge"
+    },
+    "17_OLD_POCKET_WATCH_TIME": {
+        "label": "17. ⏳ Vintage Brass Pocket Watch & Hourglass + Literary Italic",
+        "typo_spec": "refined literary italic serif typography in warm champagne gold and ivory",
+        "art_spec": "full-bleed macro still-life photograph of an antique brass pocket watch and hourglass resting on dark walnut wood in warm side light"
+    },
+    "18_FOREST_PATH_MIST": {
+        "label": "18. 🌲 Ancient Redwood Forest Mist + Emerald & White Serif",
+        "typo_spec": "clean luminous emerald and bone-white serif typography floating in the misty upper canopy space",
+        "art_spec": "full-bleed atmospheric photograph of sunbeams piercing through morning fog in an ancient pine and redwood forest"
+    },
+    "19_CHESSBOARD_STRATEGY": {
+        "label": "19. ♟️ Wooden Chessboard Macro + Sharp Monospace",
+        "typo_spec": "crisp typewriter-monospace silver and gold typography positioned cleanly in the dark background above the board",
+        "art_spec": "full-bleed shallow-depth-of-field macro photograph of carved wooden chess pieces in dramatic side lighting"
+    },
+    "20_DESERT_DUNES_SOLITUDE": {
+        "label": "20. 🏜️ Golden Desert Dunes at Twilight + Minimalist Sans",
+        "typo_spec": "clean wide-tracked uppercase white sans-serif typography centered in the deep twilight indigo sky",
+        "art_spec": "full-bleed serene photograph of sweeping golden sand dunes with sharp wind-carved ridges under a deep twilight sky"
+    },
+    "21_HARBOR_DAWN_VESSEL": {
+        "label": "21. ⛵ Quiet Wooden Boat on Glass Lake + Soft Gold Serif",
+        "typo_spec": "elegant soft-gold and white serif typography reflected in the calm upper sky space",
+        "art_spec": "full-bleed tranquil sunrise photograph of a solitary wooden rowboat moored on mirror-still lake water in golden mist"
+    },
+    "22_WORKSHOP_BLUEPRINT_CRAFT": {
+        "label": "22. 📐 Craftsman Workbench & Blueprints + Technical Sans",
+        "typo_spec": "crisp architectural white and cyan sans-serif typography with thin technical rule lines",
+        "art_spec": "full-bleed overhead-angle photograph of precision woodworking hand tools, compass, and rolled drafting paper on an oak bench"
+    },
+    "23_AUTUMN_PARK_BENCH": {
+        "label": "23. 🍂 Quiet Park Bench & Autumn Leaves + Warm Editorial Serif",
+        "typo_spec": "warm cream and amber serif typography nestled in the soft-focus golden foliage upper area",
+        "art_spec": "full-bleed candid 35mm photograph of an older mentor and younger man talking calmly beside a park bench in warm autumn light"
+    },
+    "24_NIGHT_CITY_RAIN_NEON": {
+        "label": "24. 🌃 Rain-Slicked City Street at Night + Clean White Block",
+        "typo_spec": "bold modern white sans-serif typography with a subtle cyan accent underline in the dark upper sky",
+        "art_spec": "full-bleed moody cinematic night photograph of a man in a dark trench coat walking down a quiet rain-slicked city street with warm reflections"
+    },
+    "25_SUNDIAL_STONE_COURTYARD": {
+        "label": "25. ☀️ Ancient Roman Stone Sundial + Chiseled Roman Serif",
+        "typo_spec": "classic Roman chiseled gold and ivory serif typography centered cleanly above the stone pedestal",
+        "art_spec": "full-bleed warm afternoon photograph of a weathered stone sundial casting a sharp shadow in a quiet Mediterranean courtyard"
+    },
+    "26_TRAIN_WINDOW_JOURNEY": {
+        "label": "26. 🚆 Vintage Train Window Overlooking Hills + Warm Serif",
+        "typo_spec": "clean warm-ivory serif typography positioned in the shadowed interior frame beside the window",
+        "art_spec": "full-bleed nostalgic photograph looking out a classic train compartment window at misty green hills at sunrise"
+    },
+    "27_COMPASS_MAP_EXPEDITION": {
+        "label": "27. 🧭 Antique Brass Compass on Weathered Map + Gold Slab",
+        "typo_spec": "bold antique-gold and ivory slab-serif typography arranged cleanly in the upper dark corner",
+        "art_spec": "full-bleed macro photograph of an open brass magnetic compass resting on a vintage parchment map lit by warm lantern glow"
+    },
+    "28_STARRY_NIGHT_SILHOUETTE": {
+        "label": "28. 🌌 Clear Starry Night Over Mountain Ridge + Silver Serif",
+        "typo_spec": "crisp silver-white serif typography centered in the vast starry night sky above the horizon",
+        "art_spec": "full-bleed long-exposure photograph of a lone silhouette standing on a dark ridge beneath a crystal-clear Milky Way night sky"
     }
 }
 
@@ -344,7 +445,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MODERN_MONEY",
         "pillar": "FINANCE",
-        "flow_style": "MODERN_EDITORIAL_PHOTO",
+        "flow_style": "01_MODERN_WINDOW_APARTMENT",
         "palette": "EMERALD_BONE",
         "headline": "NOBODY PAYS YOUR BILLS OUT OF SYMPATHY",
         "subtext": "Quiet savings buy the freedom to say no without panic.",
@@ -357,7 +458,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_LINCOLN_AXE",
         "pillar": "LEGACY",
-        "flow_style": "WARM_PARCHMENT_PORTRAIT",
+        "flow_style": "05_ENGRAVED_PORTRAIT_PARCHMENT",
         "palette": "CRIMSON_IVORY",
         "headline": "SHARPEN THE AXE BEFORE YOU SWING",
         "subtext": "Four hours of quiet preparation prevent four months of regret.",
@@ -370,7 +471,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_FRANKL_PAUSE",
         "pillar": "SOVEREIGNTY",
-        "flow_style": "SACRED_GEOMETRY_MYTHIC",
+        "flow_style": "07_SACRED_GEOMETRY_SHADOW",
         "palette": "GLACIAL_ICE",
         "headline": "BETWEEN PROVOCATION AND REACTION LIES YOUR FREEDOM",
         "subtext": "Lose your temper, and a stranger becomes your master.",
@@ -383,7 +484,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_ROOSEVELT_ARENA",
         "pillar": "SOVEREIGNTY",
-        "flow_style": "MONOCHROME_GRIT_SCENE",
+        "flow_style": "04_MONOCHROME_STREET_GRIT",
         "palette": "FORGE_AMBER",
         "headline": "IGNORE THE CRITICS. STAY IN THE ARENA.",
         "subtext": "People who build nothing always have plenty of advice.",
@@ -396,7 +497,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MANDELA_POISON",
         "pillar": "LONGEVITY",
-        "flow_style": "STORYBOOK_WARM_ILLUSTRATION",
+        "flow_style": "06_STORYBOOK_MARKER_HIGHLIGHT",
         "palette": "ROYAL_VIOLET",
         "headline": "BITTERNESS ONLY POISONS THE ONE WHO CARRIES IT",
         "subtext": "Let go of old grudges to reclaim your peace after forty.",
@@ -409,7 +510,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_FIVE_SILENT_PLACES",
         "pillar": "PARABLES",
-        "flow_style": "NUMBERED_CHECKLIST_POSTER",
+        "flow_style": "08_FIVE_POINT_CHECKLIST",
         "palette": "IMPERIAL_GOLD",
         "headline": "5 PLACES TO STAY SILENT AT ALL COSTS:",
         "subtext": "1. When anger wants the first word. 2. When you lack full facts. 3. When baited into a fight. 4. When plans are unfinished. 5. When actions prove it better.",
@@ -422,7 +523,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MUSASHI_CRAFT",
         "pillar": "LEGACY",
-        "flow_style": "CLASSIC_OIL_RELIEF",
+        "flow_style": "02_CLASSIC_OIL_CHIAROSCURO",
         "palette": "IMPERIAL_GOLD",
         "headline": "MASTER ONE CRAFT DEEPLY",
         "subtext": "Deep skill in one discipline builds clarity across your entire life.",
@@ -435,7 +536,7 @@ FLOW_CURATED_VAULT = [
     {
         "id": "FLOW_MUNGER_FOLLY",
         "pillar": "FINANCE",
-        "flow_style": "DARK_MINIMAL_TYPO",
+        "flow_style": "03_MINIMAL_OBSIDIAN_POSTER",
         "palette": "GLACIAL_ICE",
         "headline": "CONSISTENTLY AVOID FOOLISH MISTAKES",
         "subtext": "Long-term advantage comes from protecting your downside first.",
@@ -450,8 +551,8 @@ FLOW_CURATED_VAULT = [
 # ---------------------------------------------------------
 # 4. GOOGLE FLOW PROMPT ARCHITECT (NATIVE 4:3 FULL-BLEED)
 # ---------------------------------------------------------
-def build_google_flow_image_prompt(card_data, flow_style_key="MODERN_EDITORIAL_PHOTO", palette_key="IMPERIAL_GOLD", handle_str="@EchoesOfWisdomOfficial"):
-    style_meta = FLOW_VISUAL_STYLES.get(flow_style_key, FLOW_VISUAL_STYLES["MODERN_EDITORIAL_PHOTO"])
+def build_google_flow_image_prompt(card_data, flow_style_key="01_MODERN_WINDOW_APARTMENT", palette_key="IMPERIAL_GOLD", handle_str="@EchoesOfWisdomOfficial"):
+    style_meta = FLOW_VISUAL_STYLES.get(flow_style_key, FLOW_VISUAL_STYLES["01_MODERN_WINDOW_APARTMENT"])
     pal_meta = COLOR_PALETTES.get(palette_key, COLOR_PALETTES["IMPERIAL_GOLD"])
 
     headline = card_data.get("headline", "").strip()
@@ -468,7 +569,7 @@ def build_google_flow_image_prompt(card_data, flow_style_key="MODERN_EDITORIAL_P
         f"TYPOGRAPHY & LAYOUT: {style_meta['typo_spec']}, rendered in {pal_meta['desc']}. "
         f"The main headline reads verbatim: \"{headline}\".{sub_clause}{auth_clause} "
         f"Positioned subtly in the top-left corner is a small, clean brand handle reading \"{handle_str}\". "
-        f"COMPOSITION & SAFE ZONE: Keep ALL text, lines, and attributions strictly within the upper and middle 82% of the frame, leaving the bottom 18% completely free of any text or lines so zero cropping is ever required. Edge-to-edge full-bleed 4:3 framing with NO outer border frames, razor-sharp accurate spelling, no text overlapping faces, strictly two arms per person, photorealistic 8k."
+        f"COMPOSITION & SAFE ZONE: Keep ALL text, lines, and attributions strictly within the upper and middle 82% of the frame, leaving the bottom 18% completely free of any text or lines so bottom watermark cropping is clean. Edge-to-edge full-bleed 4:3 framing with NO outer border frames, razor-sharp accurate spelling, no text overlapping faces, strictly two arms per person, photorealistic 8k."
     )
 
 def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice="AUTO", palette_choice="AUTO"):
@@ -482,7 +583,14 @@ def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice
         available = [c for c in FLOW_CURATED_VAULT if (pillar_choice == "ALL" or c["pillar"] == pillar_choice)] or FLOW_CURATED_VAULT
 
     base = dict(random.choice(available))
-    resolved_style = base.get("flow_style", "MODERN_EDITORIAL_PHOTO") if flow_style_choice == "AUTO" else flow_style_choice
+    used_st = db.get("used_styles", [])[-28:]
+    if flow_style_choice == "AUTO":
+        unused_style_keys = [k for k in FLOW_VISUAL_STYLES.keys() if k not in used_st]
+        if not unused_style_keys:
+            unused_style_keys = list(FLOW_VISUAL_STYLES.keys())
+        resolved_style = random.choice(unused_style_keys)
+    else:
+        resolved_style = flow_style_choice
     resolved_pal = base.get("palette", "IMPERIAL_GOLD") if palette_choice == "AUTO" else palette_choice
     base["flow_style"] = resolved_style
     base["palette"] = resolved_pal
@@ -495,7 +603,7 @@ def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice
         return base, f"Curated Vault • {base.get('author','Wisdom')}"
 
     pillar_label = PILLAR_DEFINITIONS.get(base["pillar"], "Silent Power")
-    style_meta = FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES["MODERN_EDITORIAL_PHOTO"])
+    style_meta = FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES["01_MODERN_WINDOW_APARTMENT"])
     pal_meta = COLOR_PALETTES.get(resolved_pal, COLOR_PALETTES["IMPERIAL_GOLD"])
 
     ai_prompt = (
@@ -551,12 +659,12 @@ def synthesize_flow_card_package(raw_key, pillar_choice="ALL", flow_style_choice
     return base, f"Curated Vault • {base.get('author','Wisdom')}"
 
 # ---------------------------------------------------------
-# 5. ZERO-CROP SPARKLE REMOVER, LOGO OVERLAY & EXPORT ENGINE
+# 5. DEFAULT WATERMARK CROPPER, LOGO OVERLAY & EXPORT ENGINE
 # ---------------------------------------------------------
 def process_uploaded_flow_image(
     pil_img,
-    bottom_crop_pct=0.0,
-    clean_br_corner=True,
+    bottom_crop_pct=0.055,
+    clean_br_corner=False,
     logo_path=None,
     logo_pos="Bottom-Right (Covers Sparkle)",
     logo_scale_pct=11,
@@ -576,8 +684,7 @@ def process_uploaded_flow_image(
     target_h = int(round(target_w * (h / float(w))))
     im = im.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-    # Zero-crop bottom-right sparkle removal: sample clean background patch just left of the sparkle & blend smoothly
-    if clean_br_corner and bottom_crop_pct == 0:
+    if clean_br_corner:
         patch_w = int(target_w * 0.11)
         patch_h = int(target_h * 0.11)
         src_box = (target_w - patch_w * 2 - 12, target_h - patch_h, target_w - patch_w - 12, target_h)
@@ -681,7 +788,10 @@ def render_copy_btn(bid, label, text):
     </script>
     """, height=48)
 
-if "active_flow_card" not in st.session_state and os.path.exists(ACTIVE_CARD_PATH):
+if "flow_cycle_id" not in st.session_state:
+    st.session_state["flow_cycle_id"] = 0
+
+if not st.session_state.get("just_locked_cycle") and "active_flow_card" not in st.session_state and os.path.exists(ACTIVE_CARD_PATH):
     try:
         with open(ACTIVE_CARD_PATH, "r", encoding="utf-8") as af:
             saved_ac = json.load(af)
@@ -697,14 +807,14 @@ if "active_flow_card" not in st.session_state and os.path.exists(ACTIVE_CARD_PAT
 next_d = get_next_post_date()
 st.markdown("""
 <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #F8FAFC; margin-bottom: 8px;">
-    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.6 // ZERO-CROP SPARKLE REMOVER, SAFE-ZONE 4:3 PROMPTS & AUTO-LOGO</span>
+    🏛️ ECHOES FLOW IMAGE STUDIO <span style="font-size: 13px; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 600;">v4.8 // AUTO-RESET ON LOCK, DEFAULT WATERMARK CROP & 28 VISUAL STYLES</span>
 </div>
 """, unsafe_allow_html=True)
 
 active_logo = find_active_logo_path()
 st.markdown(f"""
 <div style="margin-bottom: 14px;">
-    <span class="badge badge-green">● ZERO-CROP FULL-BLEED 4:3</span>
+    <span class="badge badge-green">● 28 UNIQUE VISUAL STYLES (NO REPEAT)</span>
     <span class="badge badge-purple">🏛️ 15+ LEADERS & THINKERS</span>
     <span class="badge badge-blue">{'✓ BRAND LOGO READY' if active_logo else '🖼️ UPLOAD LOGO BELOW'}</span>
     <span class="badge badge-amber">📅 NEXT SLOT: {next_d} @ {db.get('post_time', '17:30')} IST</span>
@@ -732,10 +842,10 @@ with st.expander("🔑 API CREDENTIALS, BRAND LOGO VAULT & HANDLE", expanded=(no
             save_persistent_guide_url(ug)
 
     st.divider()
-    st.markdown("#### 🏛️ Persistent Brand Logo (Auto-Stamped in App — Zero Cropping Needed)")
+    st.markdown("#### 🏛️ Persistent Brand Logo (Auto-Stamped in App)")
     col_lg1, col_lg2 = st.columns([2, 1])
     with col_lg1:
-        logo_up = st.file_uploader("Upload Transparent PNG Logo (Saved permanently in vault)", type=["png", "webp", "jpg"], key="v46_logo_up")
+        logo_up = st.file_uploader("Upload Transparent PNG Logo (Saved permanently in vault)", type=["png", "webp", "jpg"], key="v45_logo_up")
         if logo_up:
             with open(SAVED_LOGO_PATH, "wb") as lf:
                 lf.write(logo_up.read())
@@ -745,7 +855,7 @@ with st.expander("🔑 API CREDENTIALS, BRAND LOGO VAULT & HANDLE", expanded=(no
         cur_lg = find_active_logo_path()
         if cur_lg:
             st.image(cur_lg, caption="Active Logo", width=95)
-            if st.button("🗑️ Remove Logo", key="v46_rm_logo"):
+            if st.button("🗑️ Remove Logo", key="v45_rm_logo"):
                 if os.path.exists(SAVED_LOGO_PATH):
                     try: os.remove(SAVED_LOGO_PATH)
                     except Exception: pass
@@ -757,6 +867,7 @@ if vault_hist:
         v_labels = [f"🖼️ {v.get('headline','Prompt')} — {v.get('author','')} ({v.get('flow_style','')})" for v in vault_hist]
         v_idx = st.selectbox("Select Saved Prompt", range(len(vault_hist)), format_func=lambda i: v_labels[i], key="img_vault_sel")
         if st.button("🔄 Restore Selected Prompt", key="img_vault_btn"):
+            st.session_state["just_locked_cycle"] = False
             st.session_state["active_flow_card"] = vault_hist[v_idx]
             st.session_state["active_flow_src"] = "Saved Vault"
             save_active_card_to_disk(vault_hist[v_idx], "Saved Vault")
@@ -789,19 +900,27 @@ with col_p3:
 col_btn1, col_btn2 = st.columns([2, 1])
 with col_btn1:
     if st.button("🚀 Generate Fresh 4:3 Flow Prompt", type="primary", use_container_width=True):
-        with st.spinner("⚡ Crafting full-bleed 4:3 Google Flow prompt with safe-zone margins & leader wisdom..."):
+        with st.spinner("⚡ Crafting full-bleed 4:3 Google Flow prompt with embedded typography & leader wisdom..."):
+            st.session_state["just_locked_cycle"] = False
             card, src = synthesize_flow_card_package(get_persistent_api_key(), chosen_pillar, chosen_style, chosen_palette)
             st.session_state["active_flow_card"] = card
             st.session_state["active_flow_src"] = src
+            if card.get("flow_style") not in db.get("used_styles", []):
+                db.setdefault("used_styles", []).append(card.get("flow_style"))
+                save_db(db)
             save_to_card_vault_history(card)
             save_active_card_to_disk(card, src)
             st.rerun()
 with col_btn2:
     if st.button("🔄 Discard & New Prompt", use_container_width=True):
         with st.spinner("⚡ Generating a completely different leader, format & style..."):
+            st.session_state["just_locked_cycle"] = False
             card, src = synthesize_flow_card_package(get_persistent_api_key(), "ALL", "AUTO", "AUTO")
             st.session_state["active_flow_card"] = card
             st.session_state["active_flow_src"] = src
+            if card.get("flow_style") not in db.get("used_styles", []):
+                db.setdefault("used_styles", []).append(card.get("flow_style"))
+                save_db(db)
             save_to_card_vault_history(card)
             save_active_card_to_disk(card, src)
             st.rerun()
@@ -812,162 +931,173 @@ if "active_flow_card" not in st.session_state:
     st.session_state["active_flow_card"] = default_c
     st.session_state["active_flow_src"] = "Curated Vault"
 
-card = st.session_state["active_flow_card"]
-resolved_style = card.get("flow_style", "MODERN_EDITORIAL_PHOTO") if chosen_style == "AUTO" else chosen_style
-resolved_pal = card.get("palette", "IMPERIAL_GOLD") if chosen_palette == "AUTO" else chosen_palette
-st.caption(f"Source: `{st.session_state.get('active_flow_src', 'Vault')}` | Style: `{FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES['MODERN_EDITORIAL_PHOTO'])['label']}`")
+if not st.session_state.get("just_locked_cycle", False):
+    card = st.session_state["active_flow_card"]
+    resolved_style = card.get("flow_style", "01_MODERN_WINDOW_APARTMENT") if chosen_style == "AUTO" else chosen_style
+    resolved_pal = card.get("palette", "IMPERIAL_GOLD") if chosen_palette == "AUTO" else chosen_palette
+    st.caption(f"Source: `{st.session_state.get('active_flow_src', 'Vault')}` | Style: `{FLOW_VISUAL_STYLES.get(resolved_style, FLOW_VISUAL_STYLES['01_MODERN_WINDOW_APARTMENT'])['label']}`")
 
-with st.expander("✏️ Customize Text Overlay & Scene Before Copying Flow Prompt", expanded=False):
-    col_e1, col_e2 = st.columns([2, 1])
-    with col_e1:
-        ed_head = st.text_input("Image Headline Text", value=card.get("headline", ""))
-        ed_sub = st.text_input("Image Supporting Line", value=card.get("subtext", ""))
-    with col_e2:
-        ed_auth = st.text_input("Leader / Attribution", value=card.get("author", ""))
-        ed_handle = st.text_input("Subtle Watermark Handle", value=get_persistent_handle())
-    ed_subj = st.text_area("Visual Subject & Scene", value=card.get("visual_subject", ""), height=75)
+    with st.expander("✏️ Customize Text Overlay & Scene Before Copying Flow Prompt", expanded=False):
+        col_e1, col_e2 = st.columns([2, 1])
+        with col_e1:
+            ed_head = st.text_input("Image Headline Text", value=card.get("headline", ""))
+            ed_sub = st.text_input("Image Supporting Line", value=card.get("subtext", ""))
+        with col_e2:
+            ed_auth = st.text_input("Leader / Attribution", value=card.get("author", ""))
+            ed_handle = st.text_input("Subtle Watermark Handle", value=get_persistent_handle())
+        ed_subj = st.text_area("Visual Subject & Scene", value=card.get("visual_subject", ""), height=75)
 
-edited_card_for_prompt = {
-    **card,
-    "headline": ed_head,
-    "subtext": ed_sub,
-    "author": ed_auth,
-    "visual_subject": ed_subj
-}
-live_flow_prompt = build_google_flow_image_prompt(edited_card_for_prompt, resolved_style, resolved_pal, ed_handle)
-
-st.text_area("📋 Copy & Paste This Prompt Into Google Flow (Select 4:3 — Full-Bleed, Bottom Safe Zone)", live_flow_prompt, height=155)
-render_copy_btn("flow_pr", "COPY GOOGLE FLOW 4:3 IMAGE PROMPT", live_flow_prompt)
-
-# ---------------------------------------------------------
-# 8. STEP 2: UPLOAD FLOW IMAGE -> ZERO-CROP SPARKLE REMOVE & LOGO STAMP
-# ---------------------------------------------------------
-st.divider()
-st.markdown("### ✨ 2. Upload 4:3 Google Flow Image, Remove Sparkle & Stamp Logo")
-
-uploaded_flow_img = st.file_uploader("Upload your 4:3 image generated from Google Flow", type=["png", "jpg", "jpeg", "webp"])
-if uploaded_flow_img:
-    with open(SAVED_FLOW_IMG_PATH, "wb") as sf:
-        sf.write(uploaded_flow_img.read())
-
-col_cr1, col_cr2, col_cr3 = st.columns(3)
-with col_cr1:
-    clean_corner_on = st.checkbox("✨ Zero-Crop Sparkle Remover", value=True, help="Removes the bottom-right Google Flow sparkle without cropping a single pixel of your image.")
-    wm_crop_pct = st.slider("Optional Bottom Crop %", min_value=0.0, max_value=10.0, value=0.0, step=0.5, help="Keep at 0.0% so nothing is cut off.")
-with col_cr2:
-    logo_pos_choice = st.selectbox("Brand Logo Placement", ["Bottom-Right (Covers Sparkle)", "Top-Right", "Top-Left", "Bottom-Left", "None"])
-with col_cr3:
-    logo_size_pct = st.slider("Logo Size %", min_value=6, max_value=20, value=10, step=1)
-
-slug = re.sub(r"[^a-zA-Z0-9]+", "_", ed_head).strip("_").lower() or "echoes_post"
-file_name = f"{next_d.replace('-', '')}_{slug}.png"
-
-if os.path.exists(SAVED_FLOW_IMG_PATH):
-    raw_im = Image.open(SAVED_FLOW_IMG_PATH)
-    final_im = process_uploaded_flow_image(
-        raw_im,
-        bottom_crop_pct=wm_crop_pct / 100.0,
-        clean_br_corner=clean_corner_on,
-        logo_path=find_active_logo_path(),
-        logo_pos=logo_pos_choice,
-        logo_scale_pct=logo_size_pct
-    )
-    st.image(final_im, caption=f"✓ Zero-Crop Full-Bleed Master ({final_im.size[0]}×{final_im.size[1]})", use_container_width=True)
-
-    col_dl1, col_dl2 = st.columns([3, 1])
-    with col_dl1:
-        out_buf = io.BytesIO()
-        final_im.save(out_buf, format="PNG", quality=98)
-        st.download_button(f"💾 Download Master Image ({file_name})", out_buf.getvalue(), file_name, "image/png", use_container_width=True)
-    with col_dl2:
-        if st.button("🗑️ Clear Image", use_container_width=True):
-            try: os.remove(SAVED_FLOW_IMG_PATH)
-            except Exception: pass
-            st.rerun()
-else:
-    st.info("👆 Generate your 4:3 image in Google Flow using the prompt above, then upload it here—no cropping needed.")
-
-# ---------------------------------------------------------
-# 9. STEP 3: ENGAGING STORY CAPTION, DISCUSSION QUESTION, EMOJIS & HASHTAGS
-# ---------------------------------------------------------
-st.divider()
-st.markdown("### 📝 3. Complete Meta Feed Metadata, Emojis & Hashtags")
-
-ed_ref_q = st.text_input("Comment-Triggering Reflection Question (Non-Bait)", value=card.get("reflection_prompt", "What is one hard lesson here that took you years to learn?"))
-hashtags_clean = card.get("tags", "#Mindset #LifeLessons #PersonalGrowth #SelfRespect #Discipline #Wisdom")
-
-feed_caption = (
-    f"⚡ {ed_head.upper()} 🏛️\n\n"
-    f"💡 {card.get('caption_story', '')}\n\n"
-    f"💬 {ed_ref_q} 👇\n\n"
-    f"🔖 Save this reminder for tough days, or share it with someone building their future.\n"
-    f"✨ Follow {get_persistent_handle()} for daily clarity.\n\n"
-    f"{hashtags_clean}"
-)
-st.text_area("1. Meta Feed Post Caption (Story + Open Question + Emojis)", feed_caption, height=195)
-render_copy_btn("feed_cap", "COPY FEED CAPTION", feed_caption)
-
-st.text_input("2. Hashtags Only", hashtags_clean)
-render_copy_btn("feed_tags", "COPY HASHTAGS", hashtags_clean)
-
-first_comment = (
-    f"🏛️ Want a structured daily system to build emotional composure and mental discipline? ✨\n\n"
-    f"📘 Explore The 30-Day Stoic Emotional Mastery Guide & Workbook here:\n"
-    f"{get_persistent_guide_url()}\n"
-    f"🎟️ Use code FIRST50 at checkout"
-)
-st.text_area("3. Pinned First Comment (Clean Guide Link)", first_comment, height=115)
-render_copy_btn("first_comm", "COPY FIRST COMMENT", first_comment)
-
-# ---------------------------------------------------------
-# 10. DIRECT META COMPOSER & SCHEDULE LOCK
-# ---------------------------------------------------------
-st.markdown("""
-<div style="margin: 14px 0 16px 0;">
-    <a href="https://business.facebook.com/latest/composer" target="_blank" style="text-decoration: none;">
-        <button style="width: 100%; height: 3.2rem; background: #1877F2; color: white; border: none; border-radius: 8px; font-weight: 700; font-family: -apple-system, sans-serif; font-size: 13px; cursor: pointer; box-shadow: 0 4px 15px rgba(24, 119, 242, 0.35);">
-            🌐 OPEN META BUSINESS SUITE COMPOSER
-        </button>
-    </a>
-</div>
-""", unsafe_allow_html=True)
-
-col_s1, col_s2 = st.columns(2)
-with col_s1:
-    sched_date = st.date_input("Schedule Date", value=datetime.strptime(next_d, "%Y-%m-%d").date())
-with col_s2:
-    sched_time = st.text_input("Schedule Time (IST)", value=db.get("post_time", "17:30"))
-
-if st.button("✅ Lock Post & Advance Schedule", type="primary"):
-    d_str = sched_date.strftime("%Y-%m-%d")
-    db["scheduled_posts"].append({
-        "date": d_str,
-        "time": sched_time,
-        "pillar": card.get("pillar", "SOVEREIGNTY"),
-        "flow_style": resolved_style,
+    edited_card_for_prompt = {
+        **card,
         "headline": ed_head,
-        "file": file_name
-    })
-    if ed_head not in db.get("used_headlines", []):
-        db.setdefault("used_headlines", []).append(ed_head)
-    db["last_date"] = d_str
-    db["post_time"] = sched_time
-    save_db(db)
-
-    append_image_excel_tracker({
-        "date": d_str,
-        "time": sched_time,
-        "pillar": card.get("pillar", ""),
-        "flow_style": resolved_style,
-        "headline": ed_head,
+        "subtext": ed_sub,
         "author": ed_auth,
-        "file": file_name,
-        "caption": feed_caption,
-        "first_comment": first_comment
-    })
+        "visual_subject": ed_subj
+    }
+    live_flow_prompt = build_google_flow_image_prompt(edited_card_for_prompt, resolved_style, resolved_pal, ed_handle)
 
-    st.session_state["img_banner"] = f"✓ Scheduled '{ed_head}' ({resolved_style}) for {d_str} @ {sched_time} IST!"
-    st.rerun()
+    st.text_area("📋 Copy & Paste This Prompt Into Google Flow (Select 4:3 — Full-Bleed, Zero Borders)", live_flow_prompt, height=155)
+    render_copy_btn("flow_pr", "COPY GOOGLE FLOW 4:3 IMAGE PROMPT", live_flow_prompt)
+
+    # ---------------------------------------------------------
+    # 8. STEP 2: UPLOAD FLOW IMAGE -> DEFAULT CROP & STAMP LOGO
+    # ---------------------------------------------------------
+    st.divider()
+    st.markdown("### ✂️ 2. Upload 4:3 Google Flow Image, Crop Watermark & Stamp Logo")
+
+    uploaded_flow_img = st.file_uploader("Upload your 4:3 image generated from Google Flow", type=["png", "jpg", "jpeg", "webp"], key=f"flow_up_{st.session_state.get('flow_cycle_id', 0)}")
+    if uploaded_flow_img:
+        with open(SAVED_FLOW_IMG_PATH, "wb") as sf:
+            sf.write(uploaded_flow_img.read())
+
+    col_cr1, col_cr2, col_cr3 = st.columns(3)
+    with col_cr1:
+        wm_crop_pct = st.slider("Bottom Watermark Crop %", min_value=0.0, max_value=15.0, value=5.5, step=0.5, help="Default 5.5% removes the Flow watermark cleanly; drag higher if you want to crop more.")
+        clean_corner_on = st.checkbox("✨ Extra Corner Blend", value=False, help="Optional extra corner blend if needed.")
+    with col_cr2:
+        logo_pos_choice = st.selectbox("Brand Logo Placement", ["Bottom-Right (Covers Sparkle)", "Top-Right", "Top-Left", "Bottom-Left", "None"])
+    with col_cr3:
+        logo_size_pct = st.slider("Logo Size %", min_value=6, max_value=20, value=10, step=1)
+
+    slug = re.sub(r"[^a-zA-Z0-9]+", "_", ed_head).strip("_").lower() or "echoes_post"
+    file_name = f"{next_d.replace('-', '')}_{slug}.png"
+
+    if os.path.exists(SAVED_FLOW_IMG_PATH):
+        raw_im = Image.open(SAVED_FLOW_IMG_PATH)
+        final_im = process_uploaded_flow_image(
+            raw_im,
+            bottom_crop_pct=wm_crop_pct / 100.0,
+            clean_br_corner=clean_corner_on,
+            logo_path=find_active_logo_path(),
+            logo_pos=logo_pos_choice,
+            logo_scale_pct=logo_size_pct
+        )
+        st.image(final_im, caption=f"✓ Cropped ({wm_crop_pct:.1f}% bottom) & Logo Master ({final_im.size[0]}×{final_im.size[1]})", use_container_width=True)
+
+        col_dl1, col_dl2 = st.columns([3, 1])
+        with col_dl1:
+            out_buf = io.BytesIO()
+            final_im.save(out_buf, format="PNG", quality=98)
+            st.download_button(f"💾 Download Master Image ({file_name})", out_buf.getvalue(), file_name, "image/png", use_container_width=True)
+        with col_dl2:
+            if st.button("🗑️ Clear Image", use_container_width=True):
+                try: os.remove(SAVED_FLOW_IMG_PATH)
+                except Exception: pass
+                st.rerun()
+    else:
+        st.info("👆 Generate your 4:3 image in Google Flow using the prompt above, then upload it here—it auto-crops the watermark by default.")
+
+    # ---------------------------------------------------------
+    # 9. STEP 3: ENGAGING STORY CAPTION, DISCUSSION QUESTION, EMOJIS & HASHTAGS
+    # ---------------------------------------------------------
+    st.divider()
+    st.markdown("### 📝 3. Complete Meta Feed Metadata, Emojis & Hashtags")
+
+    ed_ref_q = st.text_input("Comment-Triggering Reflection Question (Non-Bait)", value=card.get("reflection_prompt", "What is one hard lesson here that took you years to learn?"))
+    hashtags_clean = card.get("tags", "#Mindset #LifeLessons #PersonalGrowth #SelfRespect #Discipline #Wisdom")
+
+    feed_caption = (
+        f"⚡ {ed_head.upper()} 🏛️\n\n"
+        f"💡 {card.get('caption_story', '')}\n\n"
+        f"💬 {ed_ref_q} 👇\n\n"
+        f"🔖 Save this reminder for tough days, or share it with someone building their future.\n"
+        f"✨ Follow {get_persistent_handle()} for daily clarity.\n\n"
+        f"{hashtags_clean}"
+    )
+    st.text_area("1. Meta Feed Post Caption (Story + Open Question + Emojis)", feed_caption, height=195)
+    render_copy_btn("feed_cap", "COPY FEED CAPTION", feed_caption)
+
+    st.text_input("2. Hashtags Only", hashtags_clean)
+    render_copy_btn("feed_tags", "COPY HASHTAGS", hashtags_clean)
+
+    first_comment = (
+        f"🏛️ Want a structured daily system to build emotional composure and mental discipline? ✨\n\n"
+        f"📘 Explore The 30-Day Stoic Emotional Mastery Guide & Workbook here:\n"
+        f"{get_persistent_guide_url()}\n"
+        f"🎟️ Use code FIRST50 at checkout"
+    )
+    st.text_area("3. Pinned First Comment (Clean Guide Link)", first_comment, height=115)
+    render_copy_btn("first_comm", "COPY FIRST COMMENT", first_comment)
+
+    # ---------------------------------------------------------
+    # 10. DIRECT META COMPOSER & SCHEDULE LOCK
+    # ---------------------------------------------------------
+    st.markdown("""
+    <div style="margin: 14px 0 16px 0;">
+        <a href="https://business.facebook.com/latest/composer" target="_blank" style="text-decoration: none;">
+            <button style="width: 100%; height: 3.2rem; background: #1877F2; color: white; border: none; border-radius: 8px; font-weight: 700; font-family: -apple-system, sans-serif; font-size: 13px; cursor: pointer; box-shadow: 0 4px 15px rgba(24, 119, 242, 0.35);">
+                🌐 OPEN META BUSINESS SUITE COMPOSER
+            </button>
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        sched_date = st.date_input("Schedule Date", value=datetime.strptime(next_d, "%Y-%m-%d").date())
+    with col_s2:
+        sched_time = st.text_input("Schedule Time (IST)", value=db.get("post_time", "17:30"))
+
+    if st.button("✅ Lock Post & Advance Schedule", type="primary"):
+        d_str = sched_date.strftime("%Y-%m-%d")
+        db["scheduled_posts"].append({
+            "date": d_str,
+            "time": sched_time,
+            "pillar": card.get("pillar", "SOVEREIGNTY"),
+            "flow_style": resolved_style,
+            "headline": ed_head,
+            "file": file_name
+        })
+        if ed_head not in db.get("used_headlines", []):
+            db.setdefault("used_headlines", []).append(ed_head)
+        if resolved_style not in db.get("used_styles", []):
+            db.setdefault("used_styles", []).append(resolved_style)
+        db["last_date"] = d_str
+        db["post_time"] = sched_time
+        save_db(db)
+
+        append_image_excel_tracker({
+            "date": d_str,
+            "time": sched_time,
+            "pillar": card.get("pillar", ""),
+            "flow_style": resolved_style,
+            "headline": ed_head,
+            "author": ed_auth,
+            "file": file_name,
+            "caption": feed_caption,
+            "first_comment": first_comment
+        })
+
+        for stale_f in [ACTIVE_CARD_PATH, SAVED_FLOW_IMG_PATH]:
+            if os.path.exists(stale_f):
+                try: os.remove(stale_f)
+                except Exception: pass
+        st.session_state.pop("active_flow_card", None)
+        st.session_state.pop("active_flow_src", None)
+        st.session_state["flow_cycle_id"] = st.session_state.get("flow_cycle_id", 0) + 1
+        st.session_state["just_locked_cycle"] = True
+        st.session_state["img_banner"] = f"✓ Scheduled '{ed_head}' for {d_str} @ {sched_time} IST! Ready to generate your next prompt above."
+        st.rerun()
 
 # ---------------------------------------------------------
 # 11. SCHEDULED QUEUE & EXCEL EXPORT
@@ -991,7 +1121,7 @@ if db.get("scheduled_posts"):
                     <span style="color: #64748B;"> @ </span>
                     <span style="color: #FBBF24;">{item.get('time', '17:30')} IST</span>
                     <div style="color: #F8FAFC; font-weight: 600; margin-top: 2px;">{item.get('headline')}</div>
-                    <div style="color: #94A3B8; font-size: 11px;">Style: {item.get('flow_style', 'MODERN_EDITORIAL_PHOTO')}</div>
+                    <div style="color: #94A3B8; font-size: 11px;">Style: {item.get('flow_style', '01_MODERN_WINDOW_APARTMENT')}</div>
                 </div>
                 <div style="color: #34D399; font-weight: 700; font-size: 11px;">● SCHEDULED</div>
             </div>
